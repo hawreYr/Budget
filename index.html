@@ -602,6 +602,13 @@
     let burnRateChartInstance = null;
     let historyChartInstance = null;
 
+    // --- CDNS & LIBRARIES SAFE WRAPPER ---
+    function safeCreateIcons() {
+      if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+        lucide.createIcons();
+      }
+    }
+
     // Initialize Page
     window.addEventListener('DOMContentLoaded', () => {
       initAppDates();
@@ -631,7 +638,7 @@
     // Initialize Firebase Connection (Follow Rule 3 - Auth Before Queries)
     async function initFirebaseConnection() {
       try {
-        if (firebaseConfigStr && firebaseConfigStr !== '{}') {
+        if (typeof firebase !== 'undefined' && firebaseConfigStr && firebaseConfigStr !== '{}') {
           const firebaseConfig = JSON.parse(firebaseConfigStr);
           const app = firebase.initializeApp(firebaseConfig);
           auth = firebase.auth();
@@ -968,7 +975,7 @@
       renderCharts(ledgerFlow);
 
       // Re-trigger icon parsing
-      lucide.createIcons();
+      safeCreateIcons();
     }
 
     // Calculate interactive dynamic projection
@@ -1019,7 +1026,7 @@
             <p class="text-xs text-slate-600 max-w-xs">Use the "Add Spending" button to log expense items for this month.</p>
           </div>
         `;
-        lucide.createIcons();
+        safeCreateIcons();
         return;
       }
 
@@ -1052,7 +1059,7 @@
         container.appendChild(row);
       });
 
-      lucide.createIcons();
+      safeCreateIcons();
     }
 
     // --- TAB NAVIGATION SYSTEMS ---
@@ -1089,14 +1096,18 @@
         const ledgerFlow = calculateLedgerFlow(appData, currentMonthKey);
         renderCharts(ledgerFlow);
       }
-      lucide.createIcons();
+      safeCreateIcons();
     }
 
     // --- CHART GRAPHICS (BURN RATE + 6-MONTH HISTORY) ---
     function renderCharts(ledgerFlow) {
-      // Avoid parsing if analytics tab is not visible to prevent layout bugs
+      // Avoid parsing if analytics tab is not visible or if Chart.js is not loaded
       const analyticsTab = document.getElementById('tab-analytics-view');
       if (analyticsTab.classList.contains('hidden')) return;
+      if (typeof Chart === 'undefined') {
+        console.warn('Chart.js is not loaded or is blocked by an ad-blocker.');
+        return;
+      }
 
       const targetData = ledgerFlow.target;
       const [year, month] = currentMonthKey.split('-').map(Number);
@@ -1393,7 +1404,7 @@
       
       // Show content element
       document.getElementById(modalContentId).classList.remove('hidden');
-      lucide.createIcons();
+      safeCreateIcons();
     }
 
     function closeModal() {
@@ -1640,7 +1651,7 @@
       `;
 
       container.appendChild(toast);
-      lucide.createIcons();
+      safeCreateIcons();
 
       // Trigger animation
       setTimeout(() => {
