@@ -1,1822 +1,1663 @@
 
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sleek IQD Cumulative Budget Tracker (Cloud Synced)</title>
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#f0fdf4',
-                            100: '#dcfce7',
-                            500: '#22c55e',
-                            600: '#16a34a',
-                            700: '#15803d',
-                        },
-                        darkBg: '#090d16',
-                        darkCard: '#111827',
-                        darkBorder: '#1f2937'
-                    }
-                }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IQD Cumulative Ledger & Budget Tracker</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase Compat CDN (Simplifies single-file embeds) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
             }
+          }
         }
-    </script>
-    <!-- Chart.js via CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        /* Custom scrollbar styling for a premium look */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #090d16;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #1f2937;
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #374151;
-        }
-    </style>
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+    
+    /* Custom premium scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(51, 65, 85, 0.8);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(71, 85, 105, 1);
+    }
+  </style>
 </head>
-<body class="bg-[#090d16] text-slate-100 font-sans antialiased min-h-screen">
+<body class="h-full flex flex-col md:flex-row overflow-hidden select-none">
 
-    <!-- APP WRAPPER -->
-    <div class="flex flex-col md:flex-row min-h-screen">
-
-        <!-- DESKTOP SIDEBAR NAVIGATION -->
-        <aside class="hidden md:flex flex-col w-72 bg-[#111827] border-r border-[#1f2937] p-6 shrink-0 justify-between">
-            <div class="space-y-8">
-                <!-- Branding -->
-                <div class="flex items-center space-x-3">
-                    <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
-                        <i data-lucide="wallet" class="w-6 h-6"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-lg font-bold bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">IQD Ledger</h1>
-                        <span class="text-xs text-slate-500 uppercase font-semibold tracking-wider">Cloud Ledger Sync</span>
-                    </div>
-                </div>
-
-                <!-- Navigation Links -->
-                <nav class="space-y-2">
-                    <button onclick="switchTab('dashboard')" id="btn-sidebar-dashboard" class="flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition text-slate-400 hover:text-white hover:bg-slate-800/50">
-                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-                        <span class="font-medium text-sm">Dashboard</span>
-                    </button>
-                    <button onclick="switchTab('transactions')" id="btn-sidebar-transactions" class="flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition text-slate-400 hover:text-white hover:bg-slate-800/50">
-                        <i data-lucide="list-collapse" class="w-5 h-5"></i>
-                        <span class="font-medium text-sm">Transactions</span>
-                    </button>
-                    <button onclick="switchTab('analytics')" id="btn-sidebar-analytics" class="flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition text-slate-400 hover:text-white hover:bg-slate-800/50">
-                        <i data-lucide="trending-up" class="w-5 h-5"></i>
-                        <span class="font-medium text-sm">Analytics</span>
-                    </button>
-                    <button onclick="switchTab('settings')" id="btn-sidebar-settings" class="flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition text-slate-400 hover:text-white hover:bg-slate-800/50">
-                        <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
-                        <span class="font-medium text-sm">Settings</span>
-                    </button>
-                </nav>
-            </div>
-
-            <!-- Cloud Connection Panel -->
-            <div class="bg-slate-900/50 border border-slate-800 p-4 rounded-xl space-y-3">
-                <div class="text-xs text-slate-500 uppercase font-semibold flex items-center justify-between">
-                    <span>Cloud Sync</span>
-                    <span id="cloud-status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
-                </div>
-                <div class="text-sm font-bold text-slate-200 truncate" id="cloud-status-text">Connecting...</div>
-                <div class="text-[9px] font-mono text-slate-500 truncate select-all hover:text-slate-300 transition" id="cloud-uid-display" title="Active Sync ID">Initializing ID...</div>
-            </div>
-        </aside>
-
-        <!-- MAIN PANEL -->
-        <main class="flex-1 flex flex-col min-h-screen relative overflow-x-hidden">
-
-            <!-- MOBILE TOP HEADER -->
-            <header class="flex md:hidden items-center justify-between p-4 bg-[#111827] border-b border-[#1f2937] sticky top-0 z-30">
-                <div class="flex items-center space-x-3">
-                    <div class="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg">
-                        <i data-lucide="wallet" class="w-5 h-5"></i>
-                    </div>
-                    <span class="font-bold text-slate-200 text-sm">IQD Ledger</span>
-                </div>
-                <div id="mobile-top-stats" class="text-xs font-mono bg-slate-800 px-2 py-1 rounded text-emerald-400 flex items-center space-x-1.5">
-                    <span id="mobile-cloud-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                    <span id="mobile-cloud-status">Syncing</span>
-                </div>
-            </header>
-
-            <!-- CONTROLLER / MONTH PICKER (Sticky Header) -->
-            <div class="bg-[#090d16] border-b border-[#1f2937]/50 px-4 md:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 sticky top-14 md:top-0 z-20 backdrop-blur-md bg-opacity-95">
-                <div class="flex items-center space-x-3">
-                    <button onclick="changeMonth(-1)" class="p-2.5 bg-[#111827] hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-300 transition hover:text-white" title="Previous Month">
-                        <i data-lucide="chevron-left" class="w-5 h-5"></i>
-                    </button>
-                    
-                    <div class="text-center min-w-[150px]">
-                        <div class="text-lg font-bold text-white tracking-tight" id="lbl-viewed-month">June 2026</div>
-                        <div class="text-[10px] text-slate-500 tracking-wider uppercase font-semibold" id="lbl-status-pill">Currently Viewing</div>
-                    </div>
-
-                    <button onclick="changeMonth(1)" class="p-2.5 bg-[#111827] hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-300 transition hover:text-white" title="Next Month">
-                        <i data-lucide="chevron-right" class="w-5 h-5"></i>
-                    </button>
-                </div>
-
-                <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
-                    <button onclick="jumpToToday()" id="btn-jump-today" class="hidden text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3.5 py-2 rounded-xl transition border border-slate-700/50 flex items-center space-x-1">
-                        <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
-                        <span>Today</span>
-                    </button>
-                    <button onclick="openTransactionModal()" class="w-full sm:w-auto px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-[#090d16] font-bold rounded-xl transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/10">
-                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                        <span>Add Expense</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- SCROLLABLE PAGE CONTAINER -->
-            <div class="flex-1 p-4 md:p-8 space-y-6 pb-24 md:pb-8">
-
-                <!-- TAB 1: DASHBOARD -->
-                <div id="tab-dashboard" class="space-y-6 tab-content">
-                    
-                    <!-- SUMMARY CARDS -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <!-- Card 1: Remaining Balance -->
-                        <div class="bg-gradient-to-br from-[#111827] to-[#151f32] border border-[#1f2937] rounded-2xl p-6 relative overflow-hidden group">
-                            <div class="absolute -right-4 -bottom-4 text-emerald-500/5 transition-transform duration-300 group-hover:scale-110">
-                                <i data-lucide="circle-dollar-sign" class="w-28 h-28"></i>
-                            </div>
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="text-sm text-slate-400 font-medium">Remaining Balance</span>
-                                <span class="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg text-xs" id="badge-balance-status">Healthy</span>
-                            </div>
-                            <div class="text-2xl md:text-3xl font-extrabold tracking-tight" id="stat-remaining-balance">0 IQD</div>
-                            <div class="mt-2 text-xs text-slate-500 flex items-center space-x-1" id="stat-remaining-desc">
-                                <span>No overspending recorded</span>
-                            </div>
-                        </div>
-
-                        <!-- Card 2: Total Budget Limit -->
-                        <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6 relative overflow-hidden">
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="text-sm text-slate-400 font-medium">Adjusted Budget</span>
-                                <button onclick="switchTab('settings')" class="text-slate-500 hover:text-slate-300 transition" title="Modify Month Settings">
-                                    <i data-lucide="pencil" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                            <div class="text-2xl md:text-3xl font-extrabold tracking-tight" id="stat-total-budget">0 IQD</div>
-                            
-                            <!-- Breakdown Details -->
-                            <div class="mt-3 pt-2 border-t border-slate-800 space-y-1 text-xs text-slate-400">
-                                <div class="flex justify-between">
-                                    <span>Base Budget:</span>
-                                    <span id="breakdown-base">0 IQD</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>Added Extra:</span>
-                                    <span class="text-teal-400" id="breakdown-extra">+0 IQD</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>Ledger Rollover:</span>
-                                    <span id="breakdown-rollover">+0 IQD</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Card 3: Total Spent -->
-                        <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6 relative overflow-hidden group">
-                            <div class="absolute -right-4 -bottom-4 text-rose-500/5 transition-transform duration-300 group-hover:scale-110">
-                                <i data-lucide="receipt" class="w-28 h-28"></i>
-                            </div>
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="text-sm text-slate-400 font-medium">Total Spent</span>
-                                <span class="p-1.5 bg-rose-500/10 text-rose-400 rounded-lg text-xs" id="stat-spent-percent">0%</span>
-                            </div>
-                            <div class="text-2xl md:text-3xl font-extrabold tracking-tight" id="stat-total-spent">0 IQD</div>
-                            <div class="mt-2 text-xs text-slate-500" id="stat-spent-count">
-                                0 transactions logged
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- PROGRESS BAR -->
-                    <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6">
-                        <div class="flex justify-between items-center mb-2 text-sm">
-                            <span class="text-slate-400 font-semibold uppercase tracking-wider text-xs">Monthly Budget Exhaustion</span>
-                            <span class="font-bold font-mono" id="progress-percentage-lbl">0%</span>
-                        </div>
-                        <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
-                            <div id="progress-bar-fill" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all duration-500" style="width: 0%"></div>
-                        </div>
-                    </div>
-
-                    <!-- PROJECTION & SAFE TO SPEND CALCULATOR -->
-                    <div id="card-projection" class="bg-[#111827] border border-slate-800/80 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-6 relative overflow-hidden">
-                        <div class="space-y-4">
-                            <div>
-                                <span class="text-xs font-bold uppercase tracking-wider text-teal-400">Current Month Intelligence</span>
-                                <h3 class="text-lg font-bold text-white mt-1">Safe-to-Spend Projection</h3>
-                                <p class="text-xs text-slate-400 mt-1">Daily limits dynamically recalculated using actual calendar days remaining.</p>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
-                                    <div class="text-slate-400 text-xs">Rest of Month</div>
-                                    <div class="text-xl font-bold font-mono text-emerald-400 mt-1" id="projection-rest-val">0 IQD</div>
-                                    <div class="text-[10px] text-slate-500" id="projection-days-left-lbl">0 days left</div>
-                                </div>
-                                <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
-                                    <div class="text-slate-400 text-xs" id="projection-custom-days-title">Next 7 Days Limit</div>
-                                    <div class="text-xl font-bold font-mono text-white mt-1" id="projection-custom-val">0 IQD</div>
-                                    <div class="text-[10px] text-slate-500" id="projection-custom-daily-lbl">0 IQD / day</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Interactive Control Panel inside projection -->
-                        <div class="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60 flex flex-col justify-between">
-                            <div class="space-y-2">
-                                <label for="range-custom-days" class="text-xs font-medium text-slate-300 flex justify-between">
-                                    <span>Adjust Forecast Window:</span>
-                                    <span class="text-emerald-400 font-bold" id="range-days-val">7 Days</span>
-                                </label>
-                                <input type="range" id="range-custom-days" min="1" max="21" value="7" oninput="updateProjectionUI()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500">
-                                <div class="flex justify-between text-[10px] text-slate-500">
-                                    <span>1 Day</span>
-                                    <span>10 Days</span>
-                                    <span>21 Days</span>
-                                </div>
-                            </div>
-
-                            <div class="mt-4 p-2.5 bg-[#090d16] rounded-lg border border-slate-800 text-[11px] text-slate-400 leading-relaxed">
-                                <i data-lucide="info" class="w-3.5 h-3.5 inline mr-1 text-emerald-400"></i>
-                                recalculates short-term spending quotas so you do not pre-exhaust late month rollover.
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- RECENT TRANSACTIONS HEADER -->
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Recent Transactions</h3>
-                            <button onclick="switchTab('transactions')" class="text-xs text-emerald-400 hover:underline flex items-center space-x-1">
-                                <span>See All</span>
-                                <i data-lucide="arrow-up-right" class="w-3 h-3"></i>
-                            </button>
-                        </div>
-
-                        <!-- Card/List Container -->
-                        <div class="bg-[#111827] border border-[#1f2937] rounded-2xl overflow-hidden divide-y divide-[#1f2937]" id="dashboard-recent-transactions">
-                            <div class="p-6 text-center text-slate-500">Retrieving ledger database...</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAB 2: TRANSACTIONS -->
-                <div id="tab-transactions" class="space-y-6 tab-content hidden">
-                    <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6">
-                        <div class="flex flex-col lg:flex-row gap-4 items-center justify-between mb-6">
-                            <div>
-                                <h2 class="text-lg font-bold text-white">Month Ledger</h2>
-                                <p class="text-xs text-slate-400 mt-1">Detailed filtering for transactions in <span class="font-bold text-slate-200" id="filter-current-month-lbl">June 2026</span></p>
-                            </div>
-                            
-                            <!-- Search & Filter Controls -->
-                            <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
-                                <div class="relative flex-1 sm:w-64">
-                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
-                                        <i data-lucide="search" class="w-4 h-4"></i>
-                                    </span>
-                                    <input type="text" id="tx-search" placeholder="Search description..." oninput="renderTransactionsTab()" class="w-full bg-[#090d16] border border-slate-800 rounded-xl py-2 pl-9 pr-4 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 transition">
-                                </div>
-                                <select id="tx-sort" onchange="renderTransactionsTab()" class="bg-[#090d16] border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-                                    <option value="newest">Newest First</option>
-                                    <option value="oldest">Oldest First</option>
-                                    <option value="highest">Highest Amount</option>
-                                    <option value="lowest">Lowest Amount</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Ledger Transactions Table -->
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="border-b border-[#1f2937] text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                                        <th class="py-3 px-4">Date & Time</th>
-                                        <th class="py-3 px-4">Description</th>
-                                        <th class="py-3 px-4 text-right">Amount (IQD)</th>
-                                        <th class="py-3 px-4 text-center">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-[#1f2937]/50 text-sm" id="transactions-table-body">
-                                    <!-- Dynamic -->
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div id="transactions-empty-state" class="hidden text-center py-12 text-slate-500">
-                            <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 text-slate-600"></i>
-                            <p class="text-sm">No transactions match your current search parameters.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAB 3: ANALYTICS -->
-                <div id="tab-analytics" class="space-y-6 tab-content hidden">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- Line Chart: Monthly Burn Rate -->
-                        <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6 flex flex-col justify-between">
-                            <div>
-                                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-1">Monthly Burn Rate</h3>
-                                <p class="text-xs text-slate-500 mb-4" id="burn-rate-desc">Cumulative spend pattern compared to normal limit limits</p>
-                            </div>
-                            <div class="h-64 flex items-center justify-center relative">
-                                <canvas id="chart-burn-rate" class="w-full h-full"></canvas>
-                            </div>
-                        </div>
-
-                        <!-- Stacked Bar Chart: 6-Month Ledger History -->
-                        <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6 flex flex-col justify-between">
-                            <div>
-                                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-1">6-Month Ledger History</h3>
-                                <p class="text-xs text-slate-500 mb-4">Historical comparison of limits, expenses, and rolling reserves</p>
-                            </div>
-                            <div class="h-64 flex items-center justify-center relative">
-                                <canvas id="chart-6month-history" class="w-full h-full"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ANALYTICS HIGHLIGHTS -->
-                    <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6">
-                        <h4 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Ledger Performance Metrics</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center md:divide-x md:divide-[#1f2937]">
-                            <div class="space-y-1">
-                                <div class="text-xs text-slate-400 uppercase tracking-widest">Daily Average Spent</div>
-                                <div class="text-xl font-bold font-mono text-emerald-400" id="metric-daily-avg">0 IQD</div>
-                                <div class="text-[10px] text-slate-500" id="metric-daily-count">For days with activity</div>
-                            </div>
-                            <div class="space-y-1">
-                                <div class="text-xs text-slate-400 uppercase tracking-widest">Highest Single Expense</div>
-                                <div class="text-xl font-bold font-mono text-rose-400" id="metric-highest">0 IQD</div>
-                                <div class="text-[10px] text-slate-500" id="metric-highest-desc">No entries logged</div>
-                            </div>
-                            <div class="space-y-1 font-mono">
-                                <div class="text-xs text-slate-400 uppercase tracking-widest font-sans">Current Rollover Reserve</div>
-                                <div class="text-xl font-bold text-teal-400" id="metric-velocity">0 IQD</div>
-                                <div class="text-[10px] text-slate-500 font-sans">Accumulated to next months</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAB 4: SETTINGS -->
-                <div id="tab-settings" class="space-y-6 tab-content hidden">
-                    
-                    <!-- Budgets Settings -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- Base Budgets Panel -->
-                        <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6 space-y-4">
-                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300">Default & Overrides Configuration</h3>
-                            
-                            <!-- Base Budget Setting -->
-                            <div class="space-y-2 p-4 bg-slate-900 rounded-xl border border-slate-800">
-                                <label for="input-base-budget" class="text-xs font-bold text-slate-400 block uppercase">Global Base Monthly Budget (IQD)</label>
-                                <p class="text-[11px] text-slate-500">Default budget utilized when generating any fresh, unconfigured month.</p>
-                                <div class="flex space-x-2 mt-2">
-                                    <input type="number" id="input-base-budget" placeholder="160000" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-                                    <button onclick="updateGlobalBaseBudget()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold rounded-xl text-xs transition">Apply</button>
-                                </div>
-                            </div>
-
-                            <!-- Specific Month Override Settings -->
-                            <div class="space-y-2 p-4 bg-slate-900 rounded-xl border border-slate-800">
-                                <label for="input-month-override" class="text-xs font-bold text-slate-400 block uppercase">Override Base Budget For: <span class="text-emerald-400" id="lbl-override-focus">June 2026</span></label>
-                                <p class="text-[11px] text-slate-500">Adjust the base budget limit for this specific month without altering global configurations.</p>
-                                <div class="flex space-x-2 mt-2">
-                                    <input type="number" id="input-month-override" placeholder="Inherited (160,000)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-                                    <button onclick="updateMonthOverride()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold rounded-xl text-xs transition">Save Override</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- One-off Extra Funds panel -->
-                        <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6 space-y-4 flex flex-col justify-between">
-                            <div>
-                                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 mb-2">Extra Funds & Cash Infusions</h3>
-                                <p class="text-xs text-slate-400 leading-relaxed">Add one-off monetary additions directly into <span class="font-bold text-white" id="lbl-infusion-month">June 2026</span>. Perfect for unexpected windfalls, gifts, or wage increments specific to this month only.</p>
-                            </div>
-
-                            <div class="space-y-2 p-4 bg-slate-900 rounded-xl border border-slate-800">
-                                <label for="input-extra-funds" class="text-xs font-bold text-slate-400 block uppercase">Added Extra Cash (IQD)</label>
-                                <div class="flex space-x-2 mt-1">
-                                    <input type="number" id="input-extra-funds" placeholder="0" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-                                    <button onclick="updateExtraFunds()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold rounded-xl text-xs transition">Save Infusion</button>
-                                </div>
-                            </div>
-
-                            <div class="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10 text-[11px] text-emerald-400/90 leading-relaxed">
-                                <i data-lucide="info" class="w-3.5 h-3.5 inline mr-1"></i>
-                                **Note**: Overrides and Extra Funds are calculated sequentially inside the cumulative engine, directly boosting rollover calculations for future months!
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Cloud Connection and Backup Details -->
-                    <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6 space-y-6">
-                        <div>
-                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300">Sync Information & Multi-Device Pairing</h3>
-                            <p class="text-xs text-slate-500 mt-1">Your ledger is securely backing up automatically to Firestore under your private cloud workspace.</p>
-                        </div>
-
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <!-- Left Card: Copy UID -->
-                            <div class="bg-slate-900/50 p-5 rounded-xl border border-slate-800 space-y-3">
-                                <div class="text-xs text-slate-400 font-bold uppercase">This Device Sync Code</div>
-                                <div class="flex items-center space-x-2">
-                                    <div class="bg-slate-950 px-3 py-2 rounded-lg text-xs font-mono text-emerald-400 truncate select-all flex-1" id="settings-uid-display">Retrieving status...</div>
-                                    <button onclick="copyUIDToClipboard()" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition" title="Copy Sync ID">
-                                        <i data-lucide="copy" class="w-4 h-4"></i>
-                                    </button>
-                                </div>
-                                <p class="text-[10px] text-slate-500 leading-relaxed">Copy this code from your primary device (e.g., iPad) to paste it on your secondary device (e.g., Phone) to link them.</p>
-                            </div>
-
-                            <!-- Right Card: Pair External UID -->
-                            <div class="bg-slate-900/50 p-5 rounded-xl border border-slate-800 space-y-3 flex flex-col justify-between">
-                                <div class="text-xs text-slate-400 font-bold uppercase">Pair External Device Ledger</div>
-                                <div class="flex space-x-2">
-                                    <input type="text" id="input-pair-uid" placeholder="Paste Sync Code from other device..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
-                                    <button onclick="pairDeviceUID()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-[#090d16] font-bold rounded-xl text-xs transition">Pair</button>
-                                </div>
-                                <div class="flex items-center justify-between text-[10px]">
-                                    <span id="pairing-status-desc" class="text-slate-500">Using local device ID.</span>
-                                    <button onclick="resetPairingUID()" id="btn-unlink-uid" class="hidden text-rose-400 hover:underline font-bold">Unlink Device</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- JSON Backup and Wipe actions -->
-                        <div class="border-t border-slate-800/80 pt-6">
-                            <h4 class="text-xs font-bold text-slate-300 uppercase mb-4">Device Backup & Storage Utilities</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="space-y-3">
-                                    <div class="text-xs font-semibold text-slate-400">Offline JSON Backups</div>
-                                    <p class="text-xs text-slate-500">Download your entire financial ledger dataset as a portable configuration file.</p>
-                                    <div class="flex flex-wrap gap-2">
-                                        <button onclick="exportDataJSON()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold rounded-xl text-xs transition flex items-center space-x-2">
-                                            <i data-lucide="download" class="w-4 h-4"></i>
-                                            <span>Export JSON File</span>
-                                        </button>
-                                        <label class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold rounded-xl text-xs transition flex items-center space-x-2 cursor-pointer">
-                                            <i data-lucide="upload" class="w-4 h-4"></i>
-                                            <span>Import JSON File</span>
-                                            <input type="file" id="btn-import-file" accept=".json" class="hidden" onchange="importDataJSON(event)">
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="space-y-3">
-                                    <div class="text-xs font-semibold text-rose-400">Wipe Cloud Ledger</div>
-                                    <p class="text-xs text-slate-500">Purge and erase all synchronized monthly transactions, cash overrides, and parameters from Firebase.</p>
-                                    <button onclick="triggerWipeModal()" class="px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/20 font-semibold rounded-xl text-xs transition flex items-center space-x-1.5">
-                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                        <span>Reset All Database</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- MOBILE BOTTOM NAVIGATION TAB BAR -->
-            <nav class="flex md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#111827]/95 backdrop-blur-md border-t border-[#1f2937] z-30 items-center justify-around">
-                <button onclick="switchTab('dashboard')" id="btn-mobile-dashboard" class="flex flex-col items-center justify-center w-12 h-12 text-slate-400 transition">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-                    <span class="text-[9px] mt-1 font-semibold tracking-wide">Home</span>
-                </button>
-                <button onclick="switchTab('transactions')" id="btn-mobile-transactions" class="flex flex-col items-center justify-center w-12 h-12 text-slate-400 transition">
-                    <i data-lucide="list-collapse" class="w-5 h-5"></i>
-                    <span class="text-[9px] mt-1 font-semibold tracking-wide">Ledger</span>
-                </button>
-                <button onclick="switchTab('analytics')" id="btn-mobile-analytics" class="flex flex-col items-center justify-center w-12 h-12 text-slate-400 transition">
-                    <i data-lucide="trending-up" class="w-5 h-5"></i>
-                    <span class="text-[9px] mt-1 font-semibold tracking-wide">Charts</span>
-                </button>
-                <button onclick="switchTab('settings')" id="btn-mobile-settings" class="flex flex-col items-center justify-center w-12 h-12 text-slate-400 transition">
-                    <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
-                    <span class="text-[9px] mt-1 font-semibold tracking-wide">Config</span>
-                </button>
-            </nav>
-        </main>
+  <!-- ================= SIDEBAR (Desktop/iPad) ================= -->
+  <aside class="hidden md:flex flex-col w-64 bg-slate-900 border-r border-slate-800 shrink-0">
+    <div class="p-6 flex items-center gap-3 border-b border-slate-800">
+      <div class="bg-emerald-500/10 p-2 rounded-xl text-emerald-400">
+        <i data-lucide="wallet" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-lg leading-tight text-white">IQD Ledger</h1>
+        <p class="text-xs text-slate-400">Cumulative Tracker</p>
+      </div>
     </div>
 
-    <!-- ==================== MODALS CONTAINER ==================== -->
+    <!-- Navigation Menu -->
+    <nav class="flex-1 p-4 space-y-1">
+      <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 bg-emerald-600 text-white">
+        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+        <span>Dashboard</span>
+      </button>
+      <button onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800/60 hover:text-white">
+        <i data-lucide="line-chart" class="w-5 h-5"></i>
+        <span>Analytics</span>
+      </button>
+      <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800/60 hover:text-white">
+        <i data-lucide="settings" class="w-5 h-5"></i>
+        <span>Settings & Sync</span>
+      </button>
+    </nav>
 
-    <!-- MODAL 1: ADD TRANSACTION -->
-    <div id="modal-transaction" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
-        <div class="bg-[#111827] border border-slate-800 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl transform scale-95 transition-all duration-300" id="modal-tx-box">
-            <!-- Modal Header -->
-            <div class="p-5 border-b border-slate-800 flex justify-between items-center bg-[#0d121e]">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-white">Log Expense Transaction</h3>
-                <button onclick="closeTransactionModal()" class="text-slate-400 hover:text-white p-1 rounded-lg transition hover:bg-slate-800">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <!-- Modal Body Form -->
-            <div class="p-6 space-y-4">
-                <!-- Amount -->
-                <div class="space-y-1">
-                    <label for="tx-amount" class="text-xs font-bold text-slate-400 uppercase">Expense Amount (IQD)</label>
-                    <div class="relative">
-                        <input type="number" id="tx-amount" placeholder="25000" class="w-full bg-[#090d16] border border-slate-800 rounded-xl py-3 pl-4 pr-12 text-lg font-bold font-mono text-emerald-400 focus:outline-none focus:border-emerald-500 transition">
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">IQD</span>
-                    </div>
-                </div>
-
-                <!-- Description & Quick Chips -->
-                <div class="space-y-1">
-                    <label for="tx-desc" class="text-xs font-bold text-slate-400 uppercase">Description / Category</label>
-                    <input type="text" id="tx-desc" value="food" class="w-full bg-[#090d16] border border-slate-800 rounded-xl py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 transition">
-                    
-                    <!-- Quick Chips -->
-                    <div class="flex flex-wrap gap-1.5 pt-1.5">
-                        <button onclick="setTxDescChip('food')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-semibold text-slate-300 transition">Food</button>
-                        <button onclick="setTxDescChip('groceries')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-semibold text-slate-300 transition">Groceries</button>
-                        <button onclick="setTxDescChip('rent')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-semibold text-slate-300 transition">Rent</button>
-                        <button onclick="setTxDescChip('transport')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-semibold text-slate-300 transition">Transport</button>
-                        <button onclick="setTxDescChip('internet')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-semibold text-slate-300 transition">Internet</button>
-                        <button onclick="setTxDescChip('shopping')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-semibold text-slate-300 transition">Shopping</button>
-                    </div>
-                </div>
-
-                <!-- Date and Time Picker -->
-                <div class="space-y-1">
-                    <label for="tx-date" class="text-xs font-bold text-slate-400 uppercase">Transaction Date & Time</label>
-                    <input type="datetime-local" id="tx-date" class="w-full bg-[#090d16] border border-slate-800 rounded-xl py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 transition">
-                    <p class="text-[10px] text-amber-500 font-semibold" id="tx-date-warning-msg"></p>
-                </div>
-
-                <!-- Custom Validation Alert -->
-                <div id="tx-form-error" class="hidden bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl text-xs text-rose-400 flex items-center space-x-2">
-                    <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i>
-                    <span id="tx-error-msg">Please input valid parameters.</span>
-                </div>
-            </div>
-            <!-- Modal Actions -->
-            <div class="p-4 bg-[#0d121e] border-t border-slate-800 flex justify-end space-x-3">
-                <button onclick="closeTransactionModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 font-semibold rounded-xl text-xs transition">Cancel</button>
-                <button onclick="saveTransactionForm()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-[#090d16] font-bold rounded-xl text-xs transition flex items-center space-x-1.5">
-                    <i data-lucide="check" class="w-4 h-4"></i>
-                    <span>Log Transaction</span>
-                </button>
-            </div>
+    <!-- Sidebar Footer (Cloud Sync Info) -->
+    <div class="p-4 border-t border-slate-800 bg-slate-950/40">
+      <div class="flex items-center gap-3">
+        <div id="sync-indicator-sidebar" class="w-2.5 h-2.5 rounded-full bg-slate-500 animate-pulse"></div>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-semibold text-slate-300 truncate" id="sidebar-sync-id">Syncing...</p>
+          <p class="text-[10px] text-slate-500" id="sync-status-sidebar">Connecting to cloud</p>
         </div>
+        <button onclick="copySyncID()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800" title="Copy Sync ID">
+          <i data-lucide="copy" class="w-4 h-4"></i>
+        </button>
+      </div>
     </div>
+  </aside>
 
-    <!-- MODAL 2: DELETE TRANSACTION CONFIRMATION -->
-    <div id="modal-delete" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
-        <div class="bg-[#111827] border border-slate-800 w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl transform scale-95 transition-all duration-300" id="modal-delete-box">
-            <div class="p-6 text-center space-y-4">
-                <div class="p-3 bg-rose-500/10 text-rose-500 rounded-full w-12 h-12 mx-auto flex items-center justify-center border border-rose-500/20">
-                    <i data-lucide="trash-2" class="w-6 h-6"></i>
-                </div>
-                <div>
-                    <h3 class="text-base font-bold text-white">Delete Transaction?</h3>
-                    <p class="text-xs text-slate-400 mt-2 leading-relaxed">This action permanently deletes this entry from Firebase and automatically recalculates cumulative rollover factors.</p>
-                </div>
-            </div>
-            <div class="p-4 bg-[#0d121e] border-t border-slate-800 flex justify-end space-x-3">
-                <button onclick="closeDeleteModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 font-semibold rounded-xl text-xs transition">Dismiss</button>
-                <button id="btn-confirm-delete" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white font-semibold rounded-xl text-xs transition">Permanently Delete</button>
-            </div>
+  <!-- ================= MAIN CONTENT CONTAINER ================= -->
+  <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-950">
+
+    <!-- TOP HEADER -->
+    <header class="bg-slate-900/40 border-b border-slate-900 px-4 md:px-8 py-4 flex items-center justify-between z-10">
+      <div class="flex items-center gap-4">
+        <!-- Month Selector Controls -->
+        <div class="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-inner shadow-black/40">
+          <button onclick="navigateMonth(-1)" class="p-2 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg transition-colors">
+            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+          </button>
+          <span id="view-month-label" class="px-4 font-semibold text-sm md:text-base text-white min-w-[120px] text-center">June 2026</span>
+          <button onclick="navigateMonth(1)" class="p-2 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg transition-colors">
+            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+          </button>
         </div>
-    </div>
+        
+        <!-- Live Badge -->
+        <span id="real-time-badge" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+          Viewing Current Month
+        </span>
+      </div>
 
-    <!-- MODAL 3: WIPE ALL DATA CONFIRMATION -->
-    <div id="modal-wipe" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
-        <div class="bg-[#111827] border border-slate-800 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl transform scale-95 transition-all duration-300" id="modal-wipe-box">
-            <div class="p-6 space-y-4">
-                <div class="p-3 bg-red-600/10 text-red-500 rounded-full w-12 h-12 flex items-center justify-center border border-red-500/20">
-                    <i data-lucide="octagon-alert" class="w-6 h-6"></i>
+      <div class="flex items-center gap-3">
+        <button onclick="openAddSpendingModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-all duration-200 shadow-lg shadow-emerald-950/40 hover:shadow-emerald-500/10 flex items-center gap-2">
+          <i data-lucide="plus" class="w-4.5 h-4.5"></i>
+          <span class="hidden sm:inline">Add Spending</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- CONTENT VIEW SCROLLER -->
+    <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+
+      <!-- ================= TAB: DASHBOARD ================= -->
+      <section id="tab-dashboard-view" class="space-y-6">
+        
+        <!-- LEDGER OVERVIEW CARDS -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          
+          <!-- Card: Remaining Balance -->
+          <div class="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-xl shadow-black/10">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none"></div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-sm font-medium text-slate-400">Remaining Balance</span>
+              <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                <i data-lucide="piggy-bank" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <h3 id="stat-remaining-balance" class="text-3xl font-extrabold text-white tracking-tight">0 IQD</h3>
+            <div class="mt-4 flex flex-col gap-1.5">
+              <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                <div id="stat-balance-bar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+              <div class="flex justify-between text-xs text-slate-400">
+                <span id="stat-spent-percent">0% Spent</span>
+                <span id="stat-left-percent">100% Left</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card: Total Budget (Calculated) -->
+          <div class="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-xl shadow-black/10 group">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-sky-500/5 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none"></div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-sm font-medium text-slate-400 flex items-center gap-1.5">
+                Total Budget
+                <div class="relative inline-block cursor-help group/tooltip">
+                  <i data-lucide="help-circle" class="w-4 h-4 text-slate-500 hover:text-slate-300"></i>
+                  <!-- Tooltip Breakdown Box -->
+                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 shadow-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 pointer-events-none">
+                    <p class="font-bold mb-1.5 text-white">Monthly Breakdown</p>
+                    <div class="space-y-1 text-slate-400">
+                      <div class="flex justify-between">
+                        <span>Base Budget:</span>
+                        <span id="tooltip-base" class="text-white">160,000 IQD</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span>Extra Funds:</span>
+                        <span id="tooltip-extra" class="text-emerald-400">+0 IQD</span>
+                      </div>
+                      <div class="flex justify-between border-t border-slate-800 pt-1">
+                        <span>Rollover:</span>
+                        <span id="tooltip-rollover" class="text-blue-400">+0 IQD</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              </span>
+              <div class="p-2 bg-sky-500/10 text-sky-400 rounded-xl">
+                <i data-lucide="calculator" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <h3 id="stat-total-budget" class="text-3xl font-extrabold text-white tracking-tight">0 IQD</h3>
+            <div class="mt-4 text-xs text-slate-500 flex flex-wrap gap-x-2 gap-y-1">
+              <span>Base + Extra + Rollover from past months.</span>
+            </div>
+          </div>
+
+          <!-- Card: Total Spent -->
+          <div class="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-xl shadow-black/10">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none"></div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-sm font-medium text-slate-400">Total Spent</span>
+              <div class="p-2 bg-rose-500/10 text-rose-400 rounded-xl">
+                <i data-lucide="credit-card" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <h3 id="stat-total-spent" class="text-3xl font-extrabold text-white tracking-tight">0 IQD</h3>
+            <div class="mt-4 text-xs text-slate-500" id="stat-transaction-count">
+              No transactions recorded this month
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RECONCILED/ROLLOVER LIVE LEDGER DEEP DIVE PANEL -->
+        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-lg">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3.5">LEDGER ROLLOVER CALCULATION FLOW</h4>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div class="bg-slate-950/40 p-3 rounded-xl border border-slate-800/50">
+              <p class="text-xs text-slate-500">Global Base Budget</p>
+              <p class="text-base font-bold text-slate-200 mt-1" id="ledger-global-base">0 IQD</p>
+            </div>
+            <div class="bg-slate-950/40 p-3 rounded-xl border border-slate-800/50">
+              <p class="text-xs text-slate-500">Specific Month Budget</p>
+              <p class="text-base font-bold text-slate-200 mt-1" id="ledger-month-budget">0 IQD</p>
+            </div>
+            <div class="bg-slate-950/40 p-3 rounded-xl border border-slate-800/50">
+              <p class="text-xs text-slate-500">Extra Added Funds</p>
+              <p class="text-base font-bold text-emerald-400 mt-1" id="ledger-extra-funds">+0 IQD</p>
+            </div>
+            <div class="bg-slate-950/40 p-3 rounded-xl border border-slate-800/50">
+              <p class="text-xs text-slate-500">Cumulative Rollover In</p>
+              <p class="text-base font-bold text-blue-400 mt-1" id="ledger-rollover">0 IQD</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- DYNAMIC DAILY PROJECTION CARD (Only visible for current month) -->
+        <div id="dynamic-projection-container" class="hidden">
+          <div class="bg-gradient-to-r from-emerald-950/40 to-slate-900 border border-emerald-500/20 rounded-2xl p-6 relative overflow-hidden shadow-xl">
+            <div class="absolute top-1/2 -translate-y-1/2 right-4 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+              <div class="space-y-2 max-w-xl">
+                <div class="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-lg text-xs font-semibold">
+                  <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                  Real-time Smart Projections
+                </div>
+                <h3 class="text-xl font-bold text-white">Daily Spending Limit Calculator</h3>
+                <p class="text-sm text-slate-400" id="projection-explanation">
+                  There are X days left in this month. Keep your daily spending below the safe limit to stay inside your target budget.
+                </p>
+              </div>
+
+              <!-- Calculator Interface -->
+              <div class="flex items-center gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800 shrink-0 w-full lg:w-auto">
+                <div class="space-y-1">
+                  <label class="block text-[10px] text-slate-400 uppercase font-semibold">Projection Window (Days)</label>
+                  <input type="number" id="projection-days-input" min="1" max="90" value="7" oninput="recalculateDailyProjection()" class="w-24 bg-slate-900 text-white border border-slate-700 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none focus:border-emerald-500">
+                </div>
+                <div class="h-10 w-[1px] bg-slate-800"></div>
                 <div>
-                    <h3 class="text-lg font-bold text-white">Perform Complete Cloud Wipe?</h3>
-                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">This completely resets all transactions, special overrides, customized monthly parameters, and custom historical data in Firebase. Your setup will revert to default states.</p>
+                  <p class="text-[10px] text-slate-400 uppercase font-semibold">Safe Daily Limit</p>
+                  <p id="projection-limit-value" class="text-lg md:text-xl font-extrabold text-emerald-400">0 IQD / day</p>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TRANSACTIONS CONTAINER -->
+        <div class="bg-slate-900/30 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+          <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h3 class="text-lg font-bold text-white">Month Transactions</h3>
+              <p class="text-xs text-slate-400" id="transaction-count-label">Showing 0 transactions</p>
+            </div>
+            
+            <!-- Quick Filter / Search -->
+            <div class="relative w-full sm:w-64">
+              <i data-lucide="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4"></i>
+              <input type="text" id="transaction-search" placeholder="Filter by description..." oninput="renderTransactions()" class="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 rounded-xl text-sm focus:outline-none focus:border-emerald-500 transition-colors">
+            </div>
+          </div>
+
+          <!-- Transactions List -->
+          <div id="transactions-list" class="space-y-3 max-h-[450px] overflow-y-auto pr-2">
+            <!-- Rendered Dynamically -->
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================= TAB: ANALYTICS ================= -->
+      <section id="tab-analytics-view" class="hidden space-y-6">
+        
+        <!-- CHARTS GRID -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Burn Rate line chart -->
+          <div class="bg-slate-900/30 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col h-[400px]">
+            <div class="mb-4">
+              <h3 class="text-base font-bold text-white">Monthly Burn Rate</h3>
+              <p class="text-xs text-slate-400">Day-by-day actual cumulative spending compared to your target projection</p>
+            </div>
+            <div class="flex-1 min-h-0 relative">
+              <canvas id="burnRateChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Stacked 6-Month History -->
+          <div class="bg-slate-900/30 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col h-[400px]">
+            <div class="mb-4">
+              <h3 class="text-base font-bold text-white">6-Month Ledger History</h3>
+              <p class="text-xs text-slate-400">Stacked breakdowns representing spending, savings, or overspending limits</p>
+            </div>
+            <div class="flex-1 min-h-0 relative">
+              <canvas id="historyChart"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- MONTHLY HIGHLIGHTS & SUMMARY INSIGHTS -->
+        <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl">
+          <h4 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+            <i data-lucide="sparkle" class="text-emerald-400 w-4 h-4"></i>
+            Ledger Smart Analytics & Insights
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="space-y-1">
+              <span class="text-xs text-slate-400">Most Expensive Expense Category</span>
+              <p id="insight-top-description" class="text-lg font-bold text-white">-</p>
+            </div>
+            <div class="space-y-1 border-t md:border-t-0 md:border-l border-slate-800 pt-4 md:pt-0 md:pl-6">
+              <span class="text-xs text-slate-400">Average Spending Per Day</span>
+              <p id="insight-avg-daily" class="text-lg font-bold text-white">-</p>
+            </div>
+            <div class="space-y-1 border-t md:border-t-0 md:border-l border-slate-800 pt-4 md:pt-0 md:pl-6">
+              <span class="text-xs text-slate-400">Status Ending Projected Forecast</span>
+              <p id="insight-projected-end" class="text-lg font-bold text-white">-</p>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================= TAB: SETTINGS & SYNC ================= -->
+      <section id="tab-settings-view" class="hidden space-y-6">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Column 1: Budget Settings -->
+          <div class="bg-slate-900/30 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+            <div class="border-b border-slate-800 pb-4">
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <i data-lucide="sliders" class="text-slate-400 w-5 h-5"></i>
+                Ledger Configurations
+              </h3>
+              <p class="text-xs text-slate-400">Manage base monthly allocations, specific month budget rules, and extra cash inputs</p>
+            </div>
+
+            <!-- Global Base Budget Form -->
+            <div class="space-y-2">
+              <label class="block text-sm font-semibold text-slate-300">Global Base Budget Template (IQD)</label>
+              <div class="flex gap-3">
+                <input type="number" id="setting-global-base" placeholder="e.g. 160000" class="flex-1 bg-slate-900 border border-slate-800 text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
+                <button onclick="updateGlobalBaseBudget()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all duration-200">
+                  Update Template
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-500">Default base template used for creating new months in your continuous ledger.</p>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <!-- Month Budget Override & Extra Funds -->
+            <div class="space-y-4">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400" id="override-month-title">Adjust Specific Month</h4>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                  <label class="block text-xs font-semibold text-slate-300">Override Month Base (IQD)</label>
+                  <input type="number" id="setting-month-override" placeholder="e.g. 180000" class="w-full bg-slate-900 border border-slate-800 text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div class="space-y-1.5">
+                  <label class="block text-xs font-semibold text-slate-300">Add One-off Extra Funds (IQD)</label>
+                  <input type="number" id="setting-month-extra" placeholder="e.g. 20000" class="w-full bg-slate-900 border border-slate-800 text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+              </div>
+
+              <div class="flex gap-3">
+                <button onclick="updateMonthBudgetSettings()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-sm transition-all duration-200 shadow-md shadow-emerald-950/20">
+                  Save Changes for Selected Month
+                </button>
+                <button onclick="resetMonthBudgetSettings()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white font-medium px-4 py-2.5 rounded-xl text-xs transition-all duration-200" title="Reset this Month's budget settings to default global template">
+                  Reset Month Customization
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Column 2: Devices Sync & Database Controls -->
+          <div class="bg-slate-900/30 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+            <div class="border-b border-slate-800 pb-4">
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <i data-lucide="cloud" class="text-slate-400 w-5 h-5"></i>
+                Live Devices Cloud Sync
+              </h3>
+              <p class="text-xs text-slate-400">Share or synchronize your ledger live with other phones, iPads, or desktop computers</p>
+            </div>
+
+            <!-- Active Sync ID display -->
+            <div class="bg-slate-950/60 border border-slate-800 p-4 rounded-xl space-y-2">
+              <p class="text-xs text-slate-400 font-semibold">Your Live Cloud Sync ID</p>
+              <div class="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg p-2">
+                <span id="sync-id-display" class="font-mono text-xs text-slate-300 break-all select-all flex-1 px-1">Generating...</span>
+                <button onclick="copySyncID()" class="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 p-2 rounded-md transition-all shrink-0" title="Copy Sync ID">
+                  <i data-lucide="copy" class="w-4 h-4"></i>
+                </button>
+              </div>
+              <p class="text-[10px] text-slate-500 leading-normal">
+                Give this Sync ID to your partner, family, or load it onto another computer. Anyone with this ID will read/write to the same cumulative ledger in real-time.
+              </p>
+            </div>
+
+            <!-- Paste / Link new device sync ID -->
+            <div class="space-y-2">
+              <label class="block text-sm font-semibold text-slate-300">Link another Device ID</label>
+              <div class="flex gap-3">
+                <input type="text" id="sync-paste-input" placeholder="Paste your companion device's Sync ID here" class="flex-1 bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 rounded-xl px-4 py-2.5 text-xs font-mono focus:outline-none focus:border-emerald-500">
+                <button onclick="linkCompanionDevice()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all duration-200">
+                  Link Device
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-500">Linking will replace this device's current view with the partner device's data.</p>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <!-- Backup & Danger Zone -->
+            <div class="space-y-3">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Offline Backups & Maintenance</h4>
+              
+              <div class="flex flex-wrap gap-3">
+                <button onclick="exportDataJSON()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 font-medium px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-colors">
+                  <i data-lucide="download" class="w-3.5 h-3.5"></i> Export Backup
+                </button>
+                <button onclick="triggerJSONImport()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 font-medium px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-colors">
+                  <i data-lucide="upload" class="w-3.5 h-3.5"></i> Import Backup
+                </button>
+                <input type="file" id="import-file-picker" accept=".json" class="hidden" onchange="importDataJSON(event)">
                 
-                <div class="space-y-2 bg-slate-900 p-4 rounded-xl border border-slate-800">
-                    <label for="input-wipe-verify" class="text-[10px] font-bold text-slate-400 uppercase block">Type <span class="text-red-400 select-all">WIPE</span> below to authorize validation:</label>
-                    <input type="text" id="input-wipe-verify" placeholder="WIPE" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-sm text-white focus:outline-none focus:border-red-500 transition font-mono uppercase tracking-wider text-center">
-                    <p id="wipe-error-lbl" class="text-[10px] text-rose-400 hidden font-semibold">Validation mismatch. Try typing carefully.</p>
-                </div>
+                <button onclick="openWipeModal()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 font-medium px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 ml-auto transition-colors">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Wipe Data
+                </button>
+              </div>
             </div>
-            <div class="p-4 bg-[#0d121e] border-t border-slate-800 flex justify-end space-x-3">
-                <button onclick="closeWipeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 font-semibold rounded-xl text-xs transition">Nevermind</button>
-                <button onclick="confirmWipeData()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl text-xs transition">Authorize Destruction</button>
-            </div>
+
+          </div>
+
         </div>
+
+      </section>
+
     </div>
 
-    <!-- POPUP STATUS NOTICE/TOAST -->
-    <div id="toast-message" class="fixed bottom-6 right-6 md:right-10 bg-slate-900 border border-emerald-500/30 px-5 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 max-w-sm transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 z-50">
-        <div class="p-1 bg-emerald-500/10 text-emerald-400 rounded-lg">
-            <i data-lucide="info" class="w-4 h-4"></i>
+    <!-- ================= MOBILE NAVIGATION (Bottom Bar) ================= -->
+    <nav class="flex md:hidden bg-slate-900 border-t border-slate-800 p-2 justify-around items-center shrink-0 z-10">
+      <button onclick="switchTab('dashboard')" id="mobile-nav-dashboard" class="mobile-nav-btn flex flex-col items-center gap-1 py-1 px-3 text-emerald-500">
+        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+        <span class="text-[10px] font-semibold">Dashboard</span>
+      </button>
+      <button onclick="switchTab('analytics')" id="mobile-nav-analytics" class="mobile-nav-btn flex flex-col items-center gap-1 py-1 px-3 text-slate-400 hover:text-white">
+        <i data-lucide="line-chart" class="w-5 h-5"></i>
+        <span class="text-[10px] font-semibold">Analytics</span>
+      </button>
+      <button onclick="switchTab('settings')" id="mobile-nav-settings" class="mobile-nav-btn flex flex-col items-center gap-1 py-1 px-3 text-slate-400 hover:text-white">
+        <i data-lucide="settings" class="w-5 h-5"></i>
+        <span class="text-[10px] font-semibold">Settings</span>
+      </button>
+    </nav>
+
+  </main>
+
+  <!-- ================= TOAST NOTIFICATION STACK ================= -->
+  <div id="toast-container" class="fixed bottom-20 md:bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
+    <!-- Toast boxes generated via JS -->
+  </div>
+
+  <!-- ================= CUSTOM MODAL Backdrop ================= -->
+  <div id="custom-modal-backdrop" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4 transition-all duration-300">
+    
+    <!-- Modal Content: Add Transaction -->
+    <div id="modal-add-spending" class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 relative overflow-hidden hidden">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="font-extrabold text-lg text-white">Add Spending</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white hover:bg-slate-800 p-1 rounded-lg transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      
+      <form id="add-spending-form" onsubmit="saveTransaction(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Amount (IQD)</label>
+          <input type="number" id="form-amount" required min="1" placeholder="e.g. 15000" class="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
         </div>
-        <span class="text-xs text-slate-200" id="toast-text">System Synced</span>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Description</label>
+          <input type="text" id="form-description" required value="food" class="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Date & Time</label>
+          <input type="datetime-local" id="form-datetime" required class="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-sm transition-colors">
+            Cancel
+          </button>
+          <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-lg shadow-emerald-950/20">
+            Save Transaction
+          </button>
+        </div>
+      </form>
     </div>
 
-    <!-- ==================== LOGIC MODULE ==================== -->
-    <script type="module">
-        // Firebase Modular SDK Imports
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <!-- Modal Content: Delete Confirmation -->
+    <div id="modal-delete-confirm" class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 relative overflow-hidden hidden text-center space-y-4">
+      <div class="w-12 h-12 bg-rose-500/15 text-rose-400 rounded-full flex items-center justify-center mx-auto mb-2">
+        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+      </div>
+      <div class="space-y-2">
+        <h3 class="font-extrabold text-lg text-white">Delete Transaction?</h3>
+        <p class="text-xs text-slate-400 leading-relaxed">This will permanently remove this transaction from the database. This action cannot be undone.</p>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button onclick="closeModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-sm transition-colors">
+          Cancel
+        </button>
+        <button id="btn-confirm-delete" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-lg shadow-rose-950/20">
+          Delete
+        </button>
+      </div>
+    </div>
 
-        // Global Variable Configuration Defaults
-        const DEFAULT_GLOBAL_BASE = 160000;
+    <!-- Modal Content: Wipe Database Confirmation -->
+    <div id="modal-wipe-confirm" class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 relative overflow-hidden hidden text-center space-y-4">
+      <div class="w-12 h-12 bg-rose-500/15 text-rose-400 rounded-full flex items-center justify-center mx-auto mb-2">
+        <i data-lucide="trash-2" class="w-6 h-6"></i>
+      </div>
+      <div class="space-y-2">
+        <h3 class="font-extrabold text-lg text-white text-rose-400">Wipe All Data?</h3>
+        <p class="text-xs text-slate-400 leading-relaxed">This will erase all budget entries, overrides, transactions, and continuous ledger rollover records from the cloud. This action is irreversible.</p>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button onclick="closeModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-sm transition-colors">
+          Cancel
+        </button>
+        <button onclick="executeWipeData()" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-lg shadow-rose-950/20">
+          Wipe Everything
+        </button>
+      </div>
+    </div>
 
-        // Firebase Configuration (Using provided user credentials with sandbox fallback validation checks)
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "AIzaSyD0L-3ixiamzMZdWr2E-3eIEpkhatNBp2c",
-            authDomain: "drugs-91763.firebaseapp.com",
-            projectId: "drugs-91763",
-            storageBucket: "drugs-91763.firebasestorage.app",
-            messagingSenderId: "405463489645",
-            appId: "1:405463489645:web:8b09e23c3c3a00a7ccb364",
-            measurementId: "G-2LZQ1ZBBQ1"
+  </div>
+
+  <!-- ================= JAVASCRIPT LOGIC ENGINE ================= -->
+  <script>
+    // --- APP ID AND FIREBASE ENVIRONMENT INITIALIZATION ---
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'iqd-cumulative-ledger';
+    const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+
+    let db = null;
+    let auth = null;
+    let syncId = localStorage.getItem('budget_sync_id') || '';
+    let isFirebaseConnected = false;
+    let firestoreUnsubscribe = null;
+
+    // --- MAIN STATE STORE ---
+    let currentMonthKey = ''; // YYYY-MM
+    let appData = {
+      globalBaseBudget: 160000,
+      monthSettings: {}, // { 'YYYY-MM': { budgetOverride: null, addedFunds: 0 } }
+      transactions: [],  // [ { id: 'x', amount: 12000, description: 'food', date: 'YYYY-MM-DDTHH:MM' } ]
+      updatedAt: 0
+    };
+
+    // Keep track of target delete item
+    let transactionToDeleteId = null;
+
+    // Keep track of chart instances
+    let burnRateChartInstance = null;
+    let historyChartInstance = null;
+
+    // Initialize Page
+    window.addEventListener('DOMContentLoaded', () => {
+      initAppDates();
+      loadLocalStateFallback();
+      initFirebaseConnection();
+      renderDashboard();
+    });
+
+    // Setup dates and current month key
+    function initAppDates() {
+      const now = new Date();
+      currentMonthKey = getMonthKeyString(now);
+    }
+
+    // Load data from local storage for offline / quick load
+    function loadLocalStateFallback() {
+      const storedData = localStorage.getItem('budget_app_data');
+      if (storedData) {
+        try {
+          appData = JSON.parse(storedData);
+        } catch (e) {
+          console.error("Local storage corruption detected. Resetting.", e);
+        }
+      }
+    }
+
+    // Initialize Firebase Connection (Follow Rule 3 - Auth Before Queries)
+    async function initFirebaseConnection() {
+      try {
+        if (firebaseConfigStr && firebaseConfigStr !== '{}') {
+          const firebaseConfig = JSON.parse(firebaseConfigStr);
+          const app = firebase.initializeApp(firebaseConfig);
+          auth = firebase.auth();
+          db = firebase.firestore();
+
+          updateSyncStatus('connecting', 'Connecting to cloud');
+
+          // Check if custom auth token or anonymous login
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await auth.signInWithCustomToken(__initial_auth_token);
+          } else {
+            await auth.signInAnonymously();
+          }
+
+          auth.onAuthStateChanged((user) => {
+            if (user) {
+              isFirebaseConnected = true;
+              // If there was no sync ID generated, assign the authenticated UID
+              if (!syncId) {
+                syncId = user.uid;
+                localStorage.setItem('budget_sync_id', syncId);
+              }
+              setupFirestoreSync();
+            } else {
+              updateSyncStatus('offline', 'Unauthenticated');
+            }
+          });
+
+        } else {
+          updateSyncStatus('offline', 'Local-Only Mode');
+          setupLocalSyncIdFallback();
+        }
+      } catch (e) {
+        console.error("Firebase setup error:", e);
+        updateSyncStatus('offline', 'Local-Only Mode');
+        setupLocalSyncIdFallback();
+      }
+    }
+
+    function setupLocalSyncIdFallback() {
+      if (!syncId) {
+        syncId = 'offline-' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('budget_sync_id', syncId);
+      }
+      updateSyncStatus('offline', 'Local-Only Mode');
+      renderDashboard();
+    }
+
+    // Firestore Synchronization Loop (Rule 1: Strict path, Rule 2: Single-doc, Rule 3: Guarded)
+    function setupFirestoreSync() {
+      if (!isFirebaseConnected || !db || !auth.currentUser) return;
+
+      if (firestoreUnsubscribe) {
+        firestoreUnsubscribe();
+      }
+
+      const docRef = db.collection('artifacts').doc(appId)
+                       .collection('public').doc('data')
+                       .collection('syncBudgets').doc(syncId);
+
+      updateSyncStatus('syncing', 'Fetching ledger cloud stream...');
+
+      firestoreUnsubscribe = docRef.onSnapshot((docSnap) => {
+        if (docSnap.exists) {
+          const cloudData = docSnap.data();
+          // Check if cloud data is newer than local memory
+          if (cloudData.updatedAt > (appData.updatedAt || 0)) {
+            appData = cloudData;
+            localStorage.setItem('budget_app_data', JSON.stringify(appData));
+            renderDashboard();
+            showToast('Cloud Database Synchronized', 'success');
+          }
+        } else {
+          // Document does not exist yet. Initialize cloud with local cache.
+          uploadLocalDataToCloud();
+        }
+        updateSyncStatus('live', 'Cloud synced in real-time');
+      }, (err) => {
+        console.error("Firestore sync subscription failure:", err);
+        updateSyncStatus('offline', 'Stream failed. Local-Only.');
+      });
+    }
+
+    // Force upload current memory to Cloud
+    async function uploadLocalDataToCloud() {
+      if (!isFirebaseConnected || !db || !auth.currentUser) return;
+      try {
+        appData.updatedAt = Date.now();
+        const docRef = db.collection('artifacts').doc(appId)
+                         .collection('public').doc('data')
+                         .collection('syncBudgets').doc(syncId);
+        await docRef.set(appData);
+      } catch (err) {
+        console.error("Error updating cloud ledger:", err);
+      }
+    }
+
+    // Save state helper
+    function saveAndSyncState() {
+      appData.updatedAt = Date.now();
+      localStorage.setItem('budget_app_data', JSON.stringify(appData));
+      renderDashboard();
+      if (isFirebaseConnected && auth.currentUser) {
+        uploadLocalDataToCloud();
+      }
+    }
+
+    // UI Status updates
+    function updateSyncStatus(state, message) {
+      const sidebarIndicator = document.getElementById('sync-indicator-sidebar');
+      const sidebarText = document.getElementById('sync-status-sidebar');
+      const sidebarSyncIdText = document.getElementById('sidebar-sync-id');
+      const syncIdDisplay = document.getElementById('sync-id-display');
+
+      if (sidebarSyncIdText) sidebarSyncIdText.textContent = syncId || 'Local User';
+      if (syncIdDisplay) syncIdDisplay.textContent = syncId || 'Local-Only Mode';
+
+      if (!sidebarIndicator) return;
+
+      sidebarIndicator.className = 'w-2.5 h-2.5 rounded-full animate-pulse ';
+      if (state === 'live') {
+        sidebarIndicator.classList.add('bg-emerald-500');
+        sidebarText.textContent = message;
+      } else if (state === 'syncing') {
+        sidebarIndicator.classList.add('bg-amber-500');
+        sidebarText.textContent = message;
+      } else {
+        sidebarIndicator.classList.add('bg-slate-500');
+        sidebarText.textContent = message;
+      }
+    }
+
+    // --- LEDGER CALCULATION CORE ENGINE (CRITICAL ROLLOVER LOGIC) ---
+    function calculateLedgerFlow(data, targetMonth) {
+      const transactions = data.transactions || [];
+      const monthSettings = data.monthSettings || {};
+      const globalBaseBudget = Number(data.globalBaseBudget ?? 160000);
+
+      // 1. Locate earliest month in dataset (defaults to current month)
+      let earliestMonth = getMonthKeyString(new Date());
+      transactions.forEach(t => {
+        const m = t.date.substring(0, 7);
+        if (m < earliestMonth) earliestMonth = m;
+      });
+      Object.keys(monthSettings).forEach(m => {
+        if (m < earliestMonth) earliestMonth = m;
+      });
+
+      let currentLoopMonth = earliestMonth;
+      let accumulatedRollover = 0;
+      const history = {};
+
+      // 2. Compute sequentially up to the target viewed month
+      while (currentLoopMonth <= targetMonth) {
+        const settings = monthSettings[currentLoopMonth] || {};
+        const baseBudget = Number(settings.budgetOverride ?? globalBaseBudget);
+        const addedFunds = Number(settings.addedFunds ?? 0);
+
+        // Sum transaction amounts for this month
+        const monthTransactions = transactions.filter(t => t.date.substring(0, 7) === currentLoopMonth);
+        const spent = monthTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
+
+        const totalBudget = baseBudget + addedFunds + accumulatedRollover;
+        const leftover = totalBudget - spent;
+
+        history[currentLoopMonth] = {
+          baseBudget,
+          addedFunds,
+          rolloverIn: accumulatedRollover,
+          totalBudget,
+          spent,
+          leftover,
+          transactions: monthTransactions
         };
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'drugs-91763';
+        accumulatedRollover = leftover;
+        currentLoopMonth = nextMonthKey(currentLoopMonth);
+      }
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+      // If requested targetMonth was not computed (e.g. empty target in future), default build it
+      if (!history[targetMonth]) {
+        history[targetMonth] = {
+          baseBudget: globalBaseBudget,
+          addedFunds: 0,
+          rolloverIn: accumulatedRollover,
+          totalBudget: globalBaseBudget + accumulatedRollover,
+          spent: 0,
+          leftover: globalBaseBudget + accumulatedRollover,
+          transactions: []
+        };
+      }
 
-        // State Machine
-        const state = {
-            globalBaseBudget: DEFAULT_GLOBAL_BASE,
-            monthBudgets: {}, 
-            extraFunds: {},   
-            transactions: [], 
-            viewedMonth: "2026-06", 
-            activeTab: "dashboard",
-            currentRealMonth: "2026-06",
-            todayDay: 25,
-            daysInCurrentMonth: 30,
-            syncUid: null // Overridden Sync ID
+      return {
+        history,
+        target: history[targetMonth]
+      };
+    }
+
+    // Helper functions for month increments (Timezone Safe)
+    function getMonthKeyString(dateObj) {
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      return `${year}-${month}`;
+    }
+
+    function nextMonthKey(monthKey) {
+      const [year, month] = monthKey.split('-').map(Number);
+      if (month === 12) {
+        return `${year + 1}-01`;
+      } else {
+        return `${year}-${String(month + 1).padStart(2, '0')}`;
+      }
+    }
+
+    function prevMonthKey(monthKey) {
+      const [year, month] = monthKey.split('-').map(Number);
+      if (month === 1) {
+        return `${year - 1}-12`;
+      } else {
+        return `${year}-${String(month - 1).padStart(2, '0')}`;
+      }
+    }
+
+    function formatMonthName(monthKey) {
+      const [year, month] = monthKey.split('-').map(Number);
+      const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      return `${months[month - 1]} ${year}`;
+    }
+
+    // IQD Formatting Helper
+    function formatIQD(num) {
+      return Number(num).toLocaleString('en-US') + ' IQD';
+    }
+
+    // Navigate month selection
+    function navigateMonth(direction) {
+      if (direction === 1) {
+        currentMonthKey = nextMonthKey(currentMonthKey);
+      } else {
+        currentMonthKey = prevMonthKey(currentMonthKey);
+      }
+      renderDashboard();
+    }
+
+    // --- RENDER PIPELINE ---
+    function renderDashboard() {
+      // 1. Calculate cumulative engine
+      const ledgerFlow = calculateLedgerFlow(appData, currentMonthKey);
+      const targetData = ledgerFlow.target;
+
+      // 2. Set month headers
+      document.getElementById('view-month-label').textContent = formatMonthName(currentMonthKey);
+      
+      // Toggle Current Month Real-time Badge
+      const now = new Date();
+      const realWorldMonthKey = getMonthKeyString(now);
+      const realTimeBadge = document.getElementById('real-time-badge');
+      if (currentMonthKey === realWorldMonthKey) {
+        realTimeBadge.classList.remove('hidden');
+      } else {
+        realTimeBadge.classList.add('hidden');
+      }
+
+      // 3. Update top metric cards
+      document.getElementById('stat-remaining-balance').textContent = formatIQD(targetData.leftover);
+      document.getElementById('stat-total-budget').textContent = formatIQD(targetData.totalBudget);
+      document.getElementById('stat-total-spent').textContent = formatIQD(targetData.spent);
+
+      // Percentage & Progress Bars
+      const spentPercent = targetData.totalBudget > 0 ? Math.min(100, Math.round((targetData.spent / targetData.totalBudget) * 100)) : 100;
+      const leftPercent = 100 - spentPercent;
+      document.getElementById('stat-balance-bar').style.width = `${spentPercent}%`;
+      document.getElementById('stat-spent-percent').textContent = `${spentPercent}% Spent`;
+      document.getElementById('stat-left-percent').textContent = `${leftPercent}% Left`;
+
+      if (targetData.spent > targetData.totalBudget) {
+        document.getElementById('stat-balance-bar').className = "bg-rose-500 h-2 rounded-full transition-all duration-500";
+        document.getElementById('stat-remaining-balance').className = "text-3xl font-extrabold text-rose-400 tracking-tight";
+      } else {
+        document.getElementById('stat-balance-bar').className = "bg-emerald-500 h-2 rounded-full transition-all duration-500";
+        document.getElementById('stat-remaining-balance').className = "text-3xl font-extrabold text-emerald-400 tracking-tight";
+      }
+
+      // Count Label
+      const transactionCount = targetData.transactions.length;
+      document.getElementById('stat-transaction-count').textContent = `${transactionCount} Transaction${transactionCount === 1 ? '' : 's'} recorded this month`;
+
+      // 4. Update breakdown Tooltip Info
+      document.getElementById('tooltip-base').textContent = formatIQD(targetData.baseBudget);
+      document.getElementById('tooltip-extra').textContent = `+${formatIQD(targetData.addedFunds)}`;
+      document.getElementById('tooltip-rollover').textContent = `${targetData.rolloverIn >= 0 ? '+' : ''}${formatIQD(targetData.rolloverIn)}`;
+
+      // 5. Update direct Ledger Breakdown Row
+      document.getElementById('ledger-global-base').textContent = formatIQD(appData.globalBaseBudget ?? 160000);
+      document.getElementById('ledger-month-budget').textContent = formatIQD(targetData.baseBudget);
+      document.getElementById('ledger-extra-funds').textContent = `+${formatIQD(targetData.addedFunds)}`;
+      document.getElementById('ledger-rollover').textContent = `${targetData.rolloverIn >= 0 ? '+' : ''}${formatIQD(targetData.rolloverIn)}`;
+
+      // 6. Safe to Spend daily projection (Only visible on current real-world month)
+      const projectionContainer = document.getElementById('dynamic-projection-container');
+      if (currentMonthKey === realWorldMonthKey) {
+        projectionContainer.classList.remove('hidden');
+        
+        // Calculate remaining days
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const currentDay = now.getDate();
+        const daysLeft = daysInMonth - currentDay + 1;
+
+        document.getElementById('projection-explanation').textContent = `There are ${daysLeft} days left in this month (ending on ${formatMonthName(currentMonthKey)} 31st). Keep your daily spending below the safe limit.`;
+        
+        // Set dynamic days limit inside input initially if empty or pristine
+        const projectionDaysInput = document.getElementById('projection-days-input');
+        if (!projectionDaysInput.dataset.modified) {
+          projectionDaysInput.value = daysLeft;
+        }
+
+        recalculateDailyProjection();
+      } else {
+        projectionContainer.classList.add('hidden');
+      }
+
+      // 7. Render settings panel specific values
+      document.getElementById('override-month-title').textContent = `Adjust Specific Month (${formatMonthName(currentMonthKey)})`;
+      document.getElementById('setting-global-base').value = appData.globalBaseBudget ?? 160000;
+      
+      const specificSetting = appData.monthSettings[currentMonthKey] || {};
+      document.getElementById('setting-month-override').value = specificSetting.budgetOverride ?? '';
+      document.getElementById('setting-month-extra').value = specificSetting.addedFunds ?? '';
+
+      // 8. Render transaction list
+      renderTransactions();
+
+      // 9. Redraw charts
+      renderCharts(ledgerFlow);
+
+      // Re-trigger icon parsing
+      lucide.createIcons();
+    }
+
+    // Calculate interactive dynamic projection
+    function recalculateDailyProjection() {
+      const projectionDaysInput = document.getElementById('projection-days-input');
+      projectionDaysInput.dataset.modified = "true";
+
+      const daysVal = Number(projectionDaysInput.value) || 1;
+      const ledgerFlow = calculateLedgerFlow(appData, currentMonthKey);
+      const remainingBalance = ledgerFlow.target.leftover;
+
+      const dailyLimit = remainingBalance > 0 ? Math.round(remainingBalance / daysVal) : 0;
+      document.getElementById('projection-limit-value').textContent = `${formatIQD(dailyLimit)} / day`;
+      
+      if (remainingBalance <= 0) {
+        document.getElementById('projection-limit-value').className = "text-lg md:text-xl font-extrabold text-rose-400";
+        document.getElementById('projection-limit-value').textContent = "0 IQD (Budget Exceeded)";
+      } else {
+        document.getElementById('projection-limit-value').className = "text-lg md:text-xl font-extrabold text-emerald-400";
+      }
+    }
+
+    // Render Transactions lists with search and filter applied
+    function renderTransactions() {
+      const ledgerFlow = calculateLedgerFlow(appData, currentMonthKey);
+      const filterText = document.getElementById('transaction-search').value.toLowerCase().trim();
+      const container = document.getElementById('transactions-list');
+      container.innerHTML = '';
+
+      let list = ledgerFlow.target.transactions || [];
+      
+      if (filterText) {
+        list = list.filter(t => t.description.toLowerCase().includes(filterText));
+      }
+
+      // Sort chronological descending (newest on top)
+      list.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      document.getElementById('transaction-count-label').textContent = `Showing ${list.length} of ${ledgerFlow.target.transactions.length} transactions`;
+
+      if (list.length === 0) {
+        container.innerHTML = `
+          <div class="flex flex-col items-center justify-center py-10 text-center space-y-3">
+            <div class="p-3 bg-slate-900 border border-slate-800 rounded-2xl text-slate-500">
+              <i data-lucide="receipt" class="w-8 h-8"></i>
+            </div>
+            <p class="text-sm font-semibold text-slate-400">No transactions recorded</p>
+            <p class="text-xs text-slate-600 max-w-xs">Use the "Add Spending" button to log expense items for this month.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      list.forEach(item => {
+        const row = document.createElement('div');
+        row.className = "flex items-center justify-between p-4 bg-slate-900/60 border border-slate-800/80 rounded-xl hover:border-slate-700/80 transition-all duration-150 group";
+        
+        // Formatted Date
+        const dateObj = new Date(item.date);
+        const options = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        const localDateFormatted = dateObj.toLocaleDateString('en-US', options);
+
+        row.innerHTML = `
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="p-2.5 bg-rose-500/10 text-rose-400 rounded-xl shrink-0">
+              <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="text-sm font-bold text-white capitalize truncate">${item.description || 'Food'}</p>
+              <p class="text-[10px] text-slate-500 font-semibold">${localDateFormatted}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <span class="font-extrabold text-sm text-rose-400">-${formatIQD(item.amount)}</span>
+            <button onclick="confirmDeleteTransaction('${item.id}')" class="text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 p-1.5 rounded-lg opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-150" title="Delete Transaction">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+
+      lucide.createIcons();
+    }
+
+    // --- TAB NAVIGATION SYSTEMS ---
+    function switchTab(tabName) {
+      // Hide all tabs
+      document.getElementById('tab-dashboard-view').classList.add('hidden');
+      document.getElementById('tab-analytics-view').classList.add('hidden');
+      document.getElementById('tab-settings-view').classList.add('hidden');
+
+      // Unselect all menu buttons
+      document.querySelectorAll('.nav-btn, .mobile-nav-btn').forEach(btn => {
+        btn.classList.remove('bg-emerald-600', 'text-white', 'text-emerald-500');
+        btn.classList.add('text-slate-400');
+      });
+
+      // Show target tab
+      document.getElementById(`tab-${tabName}-view`).classList.remove('hidden');
+
+      // Style active nav buttons
+      const desktopBtn = document.getElementById(`nav-${tabName}`);
+      if (desktopBtn) {
+        desktopBtn.classList.add('bg-emerald-600', 'text-white');
+        desktopBtn.classList.remove('text-slate-400');
+      }
+
+      const mobileBtn = document.getElementById(`mobile-nav-${tabName}`);
+      if (mobileBtn) {
+        mobileBtn.classList.add('text-emerald-500');
+        mobileBtn.classList.remove('text-slate-400');
+      }
+
+      // Re-trigger UI render & Chart alignments
+      if (tabName === 'analytics') {
+        const ledgerFlow = calculateLedgerFlow(appData, currentMonthKey);
+        renderCharts(ledgerFlow);
+      }
+      lucide.createIcons();
+    }
+
+    // --- CHART GRAPHICS (BURN RATE + 6-MONTH HISTORY) ---
+    function renderCharts(ledgerFlow) {
+      // Avoid parsing if analytics tab is not visible to prevent layout bugs
+      const analyticsTab = document.getElementById('tab-analytics-view');
+      if (analyticsTab.classList.contains('hidden')) return;
+
+      const targetData = ledgerFlow.target;
+      const [year, month] = currentMonthKey.split('-').map(Number);
+      const totalDaysInMonth = new Date(year, month, 0).getDate();
+
+      // Create Days labels (1 to DaysInMonth)
+      const dayLabels = Array.from({ length: totalDaysInMonth }, (_, i) => String(i + 1));
+
+      // --- CHART 1: MONTHLY BURN RATE ---
+      // 1. Gather daily cumulative spend values
+      const dailyActualSpend = Array(totalDaysInMonth).fill(0);
+      targetData.transactions.forEach(t => {
+        const tDay = new Date(t.date).getDate();
+        if (tDay <= totalDaysInMonth) {
+          dailyActualSpend[tDay - 1] += Number(t.amount);
+        }
+      });
+
+      const cumulativeActualSpend = [];
+      let currentCumulative = 0;
+      const todayDate = new Date();
+      const isCurrentMonth = currentMonthKey === getMonthKeyString(todayDate);
+      const activeCurrentDay = todayDate.getDate();
+
+      for (let day = 1; day <= totalDaysInMonth; day++) {
+        // For current month, do not display actual spend past today's date
+        if (isCurrentMonth && day > activeCurrentDay) {
+          cumulativeActualSpend.push(null);
+        } else {
+          currentCumulative += dailyActualSpend[day - 1];
+          cumulativeActualSpend.push(currentCumulative);
+        }
+      }
+
+      // 2. Compute forecast prediction dataset
+      const cumulativePredictionSpend = Array(totalDaysInMonth).fill(null);
+      if (isCurrentMonth && activeCurrentDay < totalDaysInMonth) {
+        // Average burn rate per day
+        const actualTodayCumulative = cumulativeActualSpend[activeCurrentDay - 1] || 0;
+        const avgBurnPerDay = actualTodayCumulative / activeCurrentDay;
+
+        // Prediction line must connect smoothly from today's actual
+        cumulativePredictionSpend[activeCurrentDay - 1] = actualTodayCumulative;
+
+        for (let day = activeCurrentDay + 1; day <= totalDaysInMonth; day++) {
+          cumulativePredictionSpend[day - 1] = Math.round(actualTodayCumulative + (day - activeCurrentDay) * avgBurnPerDay);
+        }
+
+        // Set Analytics insight parameters
+        document.getElementById('insight-avg-daily').textContent = formatIQD(Math.round(avgBurnPerDay));
+        const finalProjectedTotal = cumulativePredictionSpend[totalDaysInMonth - 1] || 0;
+        const budgetDifference = targetData.totalBudget - finalProjectedTotal;
+        
+        if (budgetDifference >= 0) {
+          document.getElementById('insight-projected-end').textContent = `Save ${formatIQD(budgetDifference)}`;
+          document.getElementById('insight-projected-end').className = "text-lg font-bold text-emerald-400";
+        } else {
+          document.getElementById('insight-projected-end').textContent = `Overspent ${formatIQD(Math.abs(budgetDifference))}`;
+          document.getElementById('insight-projected-end').className = "text-lg font-bold text-rose-400";
+        }
+
+      } else {
+        // Past or future month static insight parameters
+        const dailyAvgStatic = targetData.transactions.length > 0 ? Math.round(targetData.spent / totalDaysInMonth) : 0;
+        document.getElementById('insight-avg-daily').textContent = formatIQD(dailyAvgStatic);
+        
+        const leftoverDifference = targetData.leftover;
+        if (leftoverDifference >= 0) {
+          document.getElementById('insight-projected-end').textContent = `Saved ${formatIQD(leftoverDifference)}`;
+          document.getElementById('insight-projected-end').className = "text-lg font-bold text-emerald-400";
+        } else {
+          document.getElementById('insight-projected-end').textContent = `Overspent ${formatIQD(Math.abs(leftoverDifference))}`;
+          document.getElementById('insight-projected-end').className = "text-lg font-bold text-rose-400";
+        }
+      }
+
+      // Find top descriptive category category item
+      const categoryMap = {};
+      targetData.transactions.forEach(t => {
+        const desc = (t.description || 'food').toLowerCase().trim();
+        categoryMap[desc] = (categoryMap[desc] || 0) + Number(t.amount);
+      });
+      let topCategory = '-';
+      let maxAmount = 0;
+      Object.keys(categoryMap).forEach(key => {
+        if (categoryMap[key] > maxAmount) {
+          maxAmount = categoryMap[key];
+          topCategory = `${key} (${formatIQD(maxAmount)})`;
+        }
+      });
+      document.getElementById('insight-top-description').textContent = topCategory;
+
+      // Draw Burn Rate Chart
+      if (burnRateChartInstance) {
+        burnRateChartInstance.destroy();
+      }
+
+      const burnRateCtx = document.getElementById('burnRateChart').getContext('2d');
+      burnRateChartInstance = new Chart(burnRateCtx, {
+        type: 'line',
+        data: {
+          labels: dayLabels,
+          datasets: [
+            {
+              label: 'Actual Spending (IQD)',
+              data: cumulativeActualSpend,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.05)',
+              borderWidth: 3,
+              tension: 0.1,
+              fill: true,
+              spanGaps: false
+            },
+            {
+              label: 'Forecast Projection (IQD)',
+              data: cumulativePredictionSpend,
+              borderColor: '#f59e0b',
+              borderDash: [6, 6],
+              borderWidth: 2,
+              pointStyle: 'circle',
+              pointRadius: 1,
+              tension: 0.1,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', weight: 'bold' } }
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => `Cumulative Spend: ${formatIQD(context.raw)}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(51, 65, 85, 0.2)' },
+              ticks: { color: '#64748b' }
+            },
+            y: {
+              grid: { color: 'rgba(51, 65, 85, 0.2)' },
+              ticks: {
+                color: '#64748b',
+                callback: (value) => value >= 1000 ? (value / 1000) + 'k' : value
+              }
+            }
+          }
+        }
+      });
+
+
+      // --- CHART 2: 6-MONTH STACKED LEDGER HISTORY ---
+      const historyMonthKeys = [];
+      let scanKey = currentMonthKey;
+      for (let i = 0; i < 6; i++) {
+        historyMonthKeys.unshift(scanKey);
+        scanKey = prevMonthKey(scanKey);
+      }
+
+      const labels6Month = historyMonthKeys.map(k => {
+        const [y, m] = k.split('-');
+        const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        return `${shortMonths[Number(m) - 1]} '${y.substring(2)}`;
+      });
+
+      const spentWithinLimitData = [];
+      const moneySavedData = [];
+      const moneyOverspentData = [];
+
+      historyMonthKeys.forEach(k => {
+        const monthCalculation = ledgerFlow.history[k] || {
+          baseBudget: appData.globalBaseBudget ?? 160000,
+          addedFunds: 0,
+          rolloverIn: 0,
+          totalBudget: appData.globalBaseBudget ?? 160000,
+          spent: 0,
+          leftover: appData.globalBaseBudget ?? 160000
         };
 
-        let ledgerChain = {};
-        let activeDeleteId = null;
-        let burnRateChartInstance = null;
-        let historyChartInstance = null;
-        let unsubConfig = null;
-        let unsubTransactions = null;
+        const totalBudget = monthCalculation.totalBudget;
+        const spent = monthCalculation.spent;
 
-        // AUTHENTICATION AND EVENT INITIALIZATION
-        window.addEventListener('DOMContentLoaded', () => {
-            initRealWorldTime();
-            initAuthSession();
-            updateUI();
+        if (spent <= totalBudget) {
+          spentWithinLimitData.push(spent);
+          moneySavedData.push(totalBudget - spent);
+          moneyOverspentData.push(0);
+        } else {
+          spentWithinLimitData.push(totalBudget);
+          moneySavedData.push(0);
+          moneyOverspentData.push(spent - totalBudget);
+        }
+      });
+
+      if (historyChartInstance) {
+        historyChartInstance.destroy();
+      }
+
+      const historyCtx = document.getElementById('historyChart').getContext('2d');
+      historyChartInstance = new Chart(historyCtx, {
+        type: 'bar',
+        data: {
+          labels: labels6Month,
+          datasets: [
+            {
+              label: 'Spent within Budget',
+              data: spentWithinLimitData,
+              backgroundColor: '#0284c7' // Blue
+            },
+            {
+              label: 'Money Saved (Leftover)',
+              data: moneySavedData,
+              backgroundColor: '#10b981' // Green
+            },
+            {
+              label: 'Overspent Limit',
+              data: moneyOverspentData,
+              backgroundColor: '#ef4444' // Red
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', weight: 'bold' } }
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => `${context.dataset.label}: ${formatIQD(context.raw)}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              grid: { display: false },
+              ticks: { color: '#64748b' }
+            },
+            y: {
+              stacked: true,
+              grid: { color: 'rgba(51, 65, 85, 0.2)' },
+              ticks: {
+                color: '#64748b',
+                callback: (value) => value >= 1000 ? (value / 1000) + 'k' : value
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // --- DIALOG MODALS ENGINE (NO ALERT / NO CONFIRM BLOCKERS) ---
+    function openAddSpendingModal() {
+      // Set default input times inside local calendar structure
+      const now = new Date();
+      const localISOString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+        .toISOString()
+        .substring(0, 16);
+      
+      document.getElementById('form-datetime').value = localISOString;
+      document.getElementById('form-amount').value = '';
+      document.getElementById('form-description').value = 'food';
+
+      showBackdropModal('modal-add-spending');
+    }
+
+    function confirmDeleteTransaction(id) {
+      transactionToDeleteId = id;
+      document.getElementById('btn-confirm-delete').onclick = () => executeDeleteTransaction();
+      showBackdropModal('modal-delete-confirm');
+    }
+
+    function openWipeModal() {
+      showBackdropModal('modal-wipe-confirm');
+    }
+
+    function showBackdropModal(modalContentId) {
+      const backdrop = document.getElementById('custom-modal-backdrop');
+      
+      // Hide all modals elements first
+      document.getElementById('modal-add-spending').classList.add('hidden');
+      document.getElementById('modal-delete-confirm').classList.add('hidden');
+      document.getElementById('modal-wipe-confirm').classList.add('hidden');
+
+      // Display container
+      backdrop.classList.remove('hidden');
+      backdrop.classList.add('flex');
+      
+      // Show content element
+      document.getElementById(modalContentId).classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeModal() {
+      const backdrop = document.getElementById('custom-modal-backdrop');
+      backdrop.classList.add('hidden');
+      backdrop.classList.remove('flex');
+    }
+
+    // --- RECONCILE ACTIONS & MUTATIONS ---
+
+    // Save transaction
+    function saveTransaction(e) {
+      e.preventDefault();
+
+      const amount = Math.abs(Number(document.getElementById('form-amount').value));
+      const description = document.getElementById('form-description').value.trim() || 'food';
+      const dateTimeVal = document.getElementById('form-datetime').value;
+
+      if (!amount || isNaN(amount)) {
+        showToast('Please enter a valid numeric amount', 'error');
+        return;
+      }
+
+      const newTx = {
+        id: 'tx-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now(),
+        amount,
+        description,
+        date: dateTimeVal // YYYY-MM-DDTHH:MM
+      };
+
+      appData.transactions.push(newTx);
+      saveAndSyncState();
+      
+      closeModal();
+      showToast('Transaction recorded successfully!', 'success');
+    }
+
+    // Delete transaction
+    function executeDeleteTransaction() {
+      if (!transactionToDeleteId) return;
+
+      appData.transactions = appData.transactions.filter(t => t.id !== transactionToDeleteId);
+      saveAndSyncState();
+
+      transactionToDeleteId = null;
+      closeModal();
+      showToast('Transaction removed', 'info');
+    }
+
+    // Update global base budget template
+    function updateGlobalBaseBudget() {
+      const globalInput = document.getElementById('setting-global-base');
+      const val = Number(globalInput.value);
+
+      if (isNaN(val) || val <= 0) {
+        showToast('Please enter a valid global base budget limit', 'error');
+        return;
+      }
+
+      appData.globalBaseBudget = val;
+      saveAndSyncState();
+      showToast('Global base budget template updated', 'success');
+    }
+
+    // Update specific month budget allocations
+    function updateMonthBudgetSettings() {
+      const overrideInput = document.getElementById('setting-month-override').value;
+      const extraInput = document.getElementById('setting-month-extra').value;
+
+      const overrideVal = overrideInput === '' ? null : Number(overrideInput);
+      const extraVal = extraInput === '' ? 0 : Number(extraInput);
+
+      if (overrideVal !== null && (isNaN(overrideVal) || overrideVal < 0)) {
+        showToast('Invalid custom month override budget value', 'error');
+        return;
+      }
+      if (isNaN(extraVal) || extraVal < 0) {
+        showToast('Invalid added extra funds value', 'error');
+        return;
+      }
+
+      // Initialize month configurations object if empty
+      if (!appData.monthSettings[currentMonthKey]) {
+        appData.monthSettings[currentMonthKey] = {};
+      }
+
+      appData.monthSettings[currentMonthKey].budgetOverride = overrideVal;
+      appData.monthSettings[currentMonthKey].addedFunds = extraVal;
+
+      saveAndSyncState();
+      showToast(`Budget configuration updated for ${formatMonthName(currentMonthKey)}`, 'success');
+    }
+
+    // Reset current month configurations to defaults
+    function resetMonthBudgetSettings() {
+      if (appData.monthSettings[currentMonthKey]) {
+        delete appData.monthSettings[currentMonthKey];
+        saveAndSyncState();
+        showToast(`Budget template defaults restored for ${formatMonthName(currentMonthKey)}`, 'info');
+      } else {
+        showToast('This month already utilizes default budget configurations', 'info');
+      }
+    }
+
+    // Wipe all localized and synced structures
+    function executeWipeData() {
+      appData = {
+        globalBaseBudget: 160000,
+        monthSettings: {},
+        transactions: [],
+        updatedAt: Date.now()
+      };
+      
+      saveAndSyncState();
+      closeModal();
+      showToast('All transaction registers and ledger variables wiped', 'info');
+    }
+
+    // --- COOPERATIVE CLOUD SYNC & DEVICE LINKING ---
+
+    // Copy Sync ID to user clipboard (Secure Compat fallback)
+    function copySyncID() {
+      if (!syncId) {
+        showToast('No Active Sync ID available', 'error');
+        return;
+      }
+
+      // Safe DOM extraction for sandboxed execution
+      const tempArea = document.createElement('textarea');
+      tempArea.value = syncId;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      
+      try {
+        const copySuccess = document.execCommand('copy');
+        if (copySuccess) {
+          showToast('Sync ID copied to clipboard!', 'success');
+        } else {
+          showToast('Failed to copy. Try selecting text manually.', 'error');
+        }
+      } catch (err) {
+        showToast('Copying blocked by frame permissions. Select text manually.', 'error');
+      }
+      document.body.removeChild(tempArea);
+    }
+
+    // Link a companion Device ID (Replaces Sync Reference)
+    function linkCompanionDevice() {
+      const companionInput = document.getElementById('sync-paste-input').value.trim();
+
+      if (!companionInput) {
+        showToast('Please paste a companion Sync ID', 'error');
+        return;
+      }
+
+      if (companionInput === syncId) {
+        showToast('This ID matches your active device', 'info');
+        return;
+      }
+
+      // Reassign local Sync pointer
+      syncId = companionInput;
+      localStorage.setItem('budget_sync_id', syncId);
+
+      // Re-establish cloud sync stream
+      setupFirestoreSync();
+
+      // Clear input and update
+      document.getElementById('sync-paste-input').value = '';
+      showToast('Device link initialized successfully!', 'success');
+    }
+
+    // --- OFFLINE EXPORT & IMPORT ACTIONS ---
+
+    // Export Data JSON File
+    function exportDataJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `iqd_ledger_backup_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('JSON Backup downloaded', 'success');
+    }
+
+    // Trigger Import Picker
+    function triggerJSONImport() {
+      document.getElementById('import-file-picker').click();
+    }
+
+    // Import Data JSON File
+    function importDataJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          
+          // Structural checks
+          if (parsed && typeof parsed === 'object') {
+            appData.globalBaseBudget = Number(parsed.globalBaseBudget ?? 160000);
+            appData.monthSettings = parsed.monthSettings || {};
+            appData.transactions = parsed.transactions || [];
             
-            document.getElementById('tx-date').addEventListener('change', checkTxDateWarning);
-        });
-
-        // Initialize Time values
-        function initRealWorldTime() {
-            const today = new Date();
-            const y = today.getFullYear();
-            const m = String(today.getMonth() + 1).padStart(2, '0');
-            state.currentRealMonth = `${y}-${m}`;
-            state.todayDay = today.getDate();
-            state.daysInCurrentMonth = new Date(y, today.getMonth() + 1, 0).getDate();
-            state.viewedMonth = state.currentRealMonth;
-            
-            // Look for previously paired sync ID override in localStorage
-            const savedPairId = localStorage.getItem('custom_sync_uid');
-            if (savedPairId) {
-                state.syncUid = savedPairId;
-            }
+            saveAndSyncState();
+            showToast('JSON Backup file imported successfully!', 'success');
+          } else {
+            showToast('Invalid JSON ledger structure format', 'error');
+          }
+        } catch (err) {
+          console.error("JSON parsing error:", err);
+          showToast('Could not parse JSON ledger. Check source file integrity.', 'error');
         }
-
-        // Authentication & Session pairing (RULE 3 - Auth Before Queries)
-        async function initAuthSession() {
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    // If no manually paired syncUid is assigned, fall back to this device's own authenticated anonymous UID
-                    if (!state.syncUid) {
-                        state.syncUid = user.uid;
-                    }
-
-                    updateSyncUIStatus();
-
-                    // Bind listeners matching paired/current user workspace
-                    bindCloudListeners();
-                } else {
-                    document.getElementById('cloud-status-text').textContent = "Authenticating...";
-                    document.getElementById('cloud-status-dot').className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
-                }
-            });
-
-            // Trigger actual authentication sign-in
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                try {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } catch (e) {
-                    console.error("Custom token signin failed, falling back anonymously", e);
-                    await signInAnonymously(auth);
-                }
-            } else {
-                await signInAnonymously(auth);
-            }
-        }
-
-        function updateSyncUIStatus() {
-            const activeId = state.syncUid || "Initializing...";
-            const isCustom = localStorage.getItem('custom_sync_uid') !== null;
-
-            document.getElementById('cloud-status-text').textContent = isCustom ? "Synced (Paired)" : "Connected & Synced";
-            document.getElementById('cloud-status-dot').className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
-            document.getElementById('cloud-uid-display').textContent = activeId;
-
-            document.getElementById('settings-status-text').textContent = isCustom ? "Linked External Workspace" : "Cloud Sync Active";
-            document.getElementById('settings-status-dot').className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
-            document.getElementById('settings-uid-display').textContent = activeId;
-
-            document.getElementById('mobile-cloud-status').textContent = isCustom ? "Paired" : "Synced";
-            document.getElementById('mobile-cloud-dot').className = "w-2 h-2 rounded-full bg-emerald-500";
-
-            // Update Pairing Status labels in Settings Tab
-            const pairDesc = document.getElementById('pairing-status-desc');
-            const unlinkBtn = document.getElementById('btn-unlink-uid');
-            if (isCustom) {
-                pairDesc.textContent = "Currently linked to paired workspace.";
-                pairDesc.className = "text-emerald-400 font-bold";
-                unlinkBtn.classList.remove('hidden');
-            } else {
-                pairDesc.textContent = "Using local device ID.";
-                pairDesc.className = "text-slate-500";
-                unlinkBtn.classList.add('hidden');
-            }
-        }
-
-        // REAL-TIME FIRESTORE WORKSPACE SYNCHRONIZATION
-        // Rule 1 Compliance: Paths are structured under private users: /artifacts/{appId}/users/{userId}/{collectionName}
-        function bindCloudListeners() {
-            if (unsubConfig) unsubConfig();
-            if (unsubTransactions) unsubTransactions();
-
-            if (!state.syncUid) return;
-
-            // Realtime user configurations document listener
-            const configDocRef = doc(db, 'artifacts', appId, 'users', state.syncUid, 'config', 'userSettings');
-            unsubConfig = onSnapshot(configDocRef, (snap) => {
-                if (snap.exists()) {
-                    const data = snap.data();
-                    state.globalBaseBudget = data.globalBaseBudget ?? DEFAULT_GLOBAL_BASE;
-                    state.monthBudgets = data.monthBudgets ?? {};
-                    state.extraFunds = data.extraFunds ?? {};
-                } else {
-                    // Create base default doc if empty
-                    syncConfigToCloud();
-                }
-                recalculateLedgerChain();
-                updateUI();
-            }, (err) => {
-                console.error("Config stream error:", err);
-            });
-
-            // Realtime transactions list listener (Rule 2 Compliance: Plain Collection snapshots, no complex query operators)
-            const txColRef = collection(db, 'artifacts', appId, 'users', state.syncUid, 'transactions');
-            unsubTransactions = onSnapshot(txColRef, (snap) => {
-                const list = [];
-                snap.forEach((doc) => {
-                    list.push({ id: doc.id, ...doc.data() });
-                });
-                state.transactions = list;
-                recalculateLedgerChain();
-                updateUI();
-            }, (err) => {
-                console.error("Transaction stream error:", err);
-            });
-        }
-
-        // Sync local adjustments to the Cloud settings document
-        async function syncConfigToCloud() {
-            if (!state.syncUid) return;
-            const ref = doc(db, 'artifacts', appId, 'users', state.syncUid, 'config', 'userSettings');
-            try {
-                await setDoc(ref, {
-                    globalBaseBudget: state.globalBaseBudget,
-                    monthBudgets: state.monthBudgets,
-                    extraFunds: state.extraFunds
-                });
-            } catch (err) {
-                console.error("Failed writing budget adjustments to cloud:", err);
-            }
-        }
-
-        // Sync a transaction to the Cloud collection
-        async function syncTransactionToCloud(tx) {
-            if (!state.syncUid) return;
-            const ref = doc(db, 'artifacts', appId, 'users', state.syncUid, 'transactions', tx.id);
-            try {
-                await setDoc(ref, {
-                    amount: tx.amount,
-                    description: tx.description,
-                    date: tx.date
-                });
-            } catch (err) {
-                console.error("Failed logging transaction to cloud:", err);
-            }
-        }
-
-        // Remove a transaction from the Cloud collection
-        async function deleteTransactionFromCloud(txId) {
-            if (!state.syncUid) return;
-            const ref = doc(db, 'artifacts', appId, 'users', state.syncUid, 'transactions', txId);
-            try {
-                await deleteDoc(ref);
-            } catch (err) {
-                console.error("Failed removing transaction from cloud:", err);
-            }
-        }
-
-        // LINKING DEVICE PAIRING FUNCTIONS
-        function pairDeviceUID() {
-            const pairInput = document.getElementById('input-pair-uid');
-            const targetId = pairInput.value.trim();
-
-            if (!targetId) {
-                showToast("Please paste a valid device Sync Code first!");
-                return;
-            }
-
-            if (auth.currentUser && targetId === auth.currentUser.uid) {
-                showToast("This is already your local device ID.");
-                return;
-            }
-
-            // Save UID Override to local storage
-            localStorage.setItem('custom_sync_uid', targetId);
-            state.syncUid = targetId;
-
-            pairInput.value = "";
-            updateSyncUIStatus();
-            bindCloudListeners();
-            showToast("Device linked! Syncing data...");
-        }
-
-        function resetPairingUID() {
-            // Remove storage override and fallback to original anonymous UID
-            localStorage.removeItem('custom_sync_uid');
-            state.syncUid = auth.currentUser ? auth.currentUser.uid : null;
-
-            updateSyncUIStatus();
-            bindCloudListeners();
-            showToast("Device unlinked. Switched back to local database.");
-        }
-
-        // LEDGER ENGINE (Sequential rollover cascading logic)
-        function recalculateLedgerChain() {
-            let startMonth = "2026-01";
-            
-            const months = new Set([state.currentRealMonth, state.viewedMonth]);
-            state.transactions.forEach(t => months.add(t.date.substring(0, 7)));
-            Object.keys(state.monthBudgets).forEach(m => months.add(m));
-            Object.keys(state.extraFunds).forEach(m => months.add(m));
-
-            const sortedMonths = Array.from(months).sort();
-            if (sortedMonths.length > 0) {
-                startMonth = sortedMonths[0];
-            }
-
-            const targetUpperStr = state.viewedMonth > state.currentRealMonth ? state.viewedMonth : state.currentRealMonth;
-            const chronologicalMonths = getMonthSequence(startMonth, targetUpperStr);
-
-            let cumulativeRollover = 0;
-            const newChain = {};
-
-            chronologicalMonths.forEach(mStr => {
-                const base = state.monthBudgets[mStr] !== undefined ? state.monthBudgets[mStr] : state.globalBaseBudget;
-                const extra = state.extraFunds[mStr] || 0;
-                
-                const totalBudget = base + extra + cumulativeRollover;
-
-                const monthlyTx = state.transactions.filter(t => t.date.substring(0, 7) === mStr);
-                const spent = monthlyTx.reduce((sum, t) => sum + t.amount, 0);
-                
-                const remaining = totalBudget - spent;
-
-                newChain[mStr] = {
-                    month: mStr,
-                    base,
-                    extra,
-                    rollover: cumulativeRollover,
-                    totalBudget,
-                    spent,
-                    remaining
-                };
-
-                cumulativeRollover = remaining;
-            });
-
-            ledgerChain = newChain;
-        }
-
-        function getMonthSequence(start, end) {
-            const list = [];
-            let current = new Date(start + "-01");
-            const target = new Date(end + "-01");
-
-            while (current <= target) {
-                const y = current.getFullYear();
-                const m = String(current.getMonth() + 1).padStart(2, '0');
-                list.push(`${y}-${m}`);
-                current.setMonth(current.getMonth() + 1);
-            }
-            return list;
-        }
-
-        // VIEW ROUTER
-        function switchTab(tabId) {
-            state.activeTab = tabId;
-            
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            const activeTabContainer = document.getElementById(`tab-${tabId}`);
-            if (activeTabContainer) activeTabContainer.classList.remove('hidden');
-
-            const sidebarTabs = ['dashboard', 'transactions', 'analytics', 'settings'];
-            sidebarTabs.forEach(t => {
-                const btnSide = document.getElementById(`btn-sidebar-${t}`);
-                const btnMob = document.getElementById(`btn-mobile-${t}`);
-                
-                if (t === tabId) {
-                    btnSide.className = "flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition bg-emerald-500 text-[#090d16] font-bold shadow-lg shadow-emerald-500/10";
-                    btnMob.className = "flex flex-col items-center justify-center w-12 h-12 text-emerald-400 transition";
-                } else {
-                    btnSide.className = "flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition text-slate-400 hover:text-white hover:bg-slate-800/50";
-                    btnMob.className = "flex flex-col items-center justify-center w-12 h-12 text-slate-400 hover:text-slate-200 transition";
-                }
-            });
-
-            if (tabId === 'transactions') {
-                renderTransactionsTab();
-            } else if (tabId === 'analytics') {
-                renderAnalyticsTab();
-            } else if (tabId === 'settings') {
-                renderSettingsTab();
-            } else if (tabId === 'dashboard') {
-                renderDashboardTab();
-            }
-        }
-
-        function changeMonth(dir) {
-            const curDate = new Date(state.viewedMonth + "-15");
-            curDate.setMonth(curDate.getMonth() + dir);
-            
-            const y = curDate.getFullYear();
-            const m = String(curDate.getMonth() + 1).padStart(2, '0');
-            state.viewedMonth = `${y}-${m}`;
-            
-            recalculateLedgerChain();
-            updateUI();
-        }
-
-        function jumpToToday() {
-            state.viewedMonth = state.currentRealMonth;
-            recalculateLedgerChain();
-            updateUI();
-            showToast("Returned to current real-world ledger!");
-        }
-
-        function updateUI() {
-            const [y, m] = state.viewedMonth.split('-');
-            const dateObj = new Date(y, parseInt(m) - 1, 1);
-            const monthLabel = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-            
-            document.getElementById('lbl-viewed-month').textContent = monthLabel;
-            
-            const statusPill = document.getElementById('lbl-status-pill');
-            const btnJump = document.getElementById('btn-jump-today');
-            if (state.viewedMonth === state.currentRealMonth) {
-                statusPill.textContent = "Current Month View";
-                statusPill.className = "text-[10px] text-emerald-400 tracking-wider uppercase font-extrabold";
-                btnJump.classList.add('hidden');
-            } else {
-                statusPill.textContent = "Historical Archive";
-                statusPill.className = "text-[10px] text-amber-500 tracking-wider uppercase font-semibold";
-                btnJump.classList.remove('hidden');
-            }
-
-            switchTab(state.activeTab);
-            lucide.createIcons();
-        }
-
-        // RENDER DASHBOARD
-        function renderDashboardTab() {
-            const currentData = ledgerChain[state.viewedMonth] || {
-                base: state.globalBaseBudget,
-                extra: 0,
-                rollover: 0,
-                totalBudget: state.globalBaseBudget,
-                spent: 0,
-                remaining: state.globalBaseBudget
-            };
-
-            document.getElementById('stat-remaining-balance').textContent = formatIQD(currentData.remaining);
-            document.getElementById('stat-total-budget').textContent = formatIQD(currentData.totalBudget);
-            document.getElementById('stat-total-spent').textContent = formatIQD(currentData.spent);
-
-            const balCard = document.getElementById('stat-remaining-balance').parentElement;
-            const balBadge = document.getElementById('badge-balance-status');
-            const balDesc = document.getElementById('stat-remaining-desc');
-            
-            if (currentData.remaining < 0) {
-                balCard.className = "bg-gradient-to-br from-[#111827] to-rose-950/20 border border-rose-900/40 rounded-2xl p-6 relative overflow-hidden group";
-                balBadge.className = "p-1.5 bg-rose-500/10 text-rose-400 rounded-lg text-xs font-bold";
-                balBadge.textContent = "Overspent";
-                balDesc.innerHTML = `<i data-lucide="info" class="w-3.5 h-3.5 inline mr-1 text-rose-400"></i> Over limits by ${formatIQD(Math.abs(currentData.remaining))}`;
-            } else {
-                balCard.className = "bg-gradient-to-br from-[#111827] to-[#151f32] border border-[#1f2937] rounded-2xl p-6 relative overflow-hidden group";
-                balBadge.className = "p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg text-xs font-bold";
-                balBadge.textContent = "Healthy";
-                balDesc.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 inline mr-1 text-emerald-400"></i> Positive balance rolling forward`;
-            }
-
-            document.getElementById('breakdown-base').textContent = formatIQD(currentData.base);
-            
-            const extraEl = document.getElementById('breakdown-extra');
-            extraEl.textContent = `+${formatIQD(currentData.extra)}`;
-            extraEl.className = currentData.extra > 0 ? "text-teal-400" : "text-slate-500";
-
-            const rollEl = document.getElementById('breakdown-rollover');
-            if (currentData.rollover > 0) {
-                rollEl.textContent = `+${formatIQD(currentData.rollover)}`;
-                rollEl.className = "text-emerald-400 font-bold";
-            } else if (currentData.rollover < 0) {
-                rollEl.textContent = `-${formatIQD(Math.abs(currentData.rollover))}`;
-                rollEl.className = "text-rose-400 font-bold";
-            } else {
-                rollEl.textContent = "0 IQD";
-                rollEl.className = "text-slate-500";
-            }
-
-            let spentPercent = 0;
-            if (currentData.totalBudget > 0) {
-                spentPercent = Math.min(Math.round((currentData.spent / currentData.totalBudget) * 100), 150);
-            } else if (currentData.spent > 0) {
-                spentPercent = 100;
-            }
-
-            document.getElementById('progress-percentage-lbl').textContent = `${spentPercent}%`;
-            document.getElementById('stat-spent-percent').textContent = `${spentPercent}%`;
-            
-            const progressFill = document.getElementById('progress-bar-fill');
-            progressFill.style.width = `${Math.min(spentPercent, 100)}%`;
-
-            if (spentPercent < 70) {
-                progressFill.className = "bg-gradient-to-r from-emerald-500 to-emerald-400 h-full transition-all duration-500";
-            } else if (spentPercent >= 70 && spentPercent < 90) {
-                progressFill.className = "bg-gradient-to-r from-amber-500 to-amber-400 h-full transition-all duration-500";
-            } else if (spentPercent >= 90 && spentPercent < 100) {
-                progressFill.className = "bg-gradient-to-r from-orange-500 to-orange-400 h-full transition-all duration-500";
-            } else {
-                progressFill.className = "bg-gradient-to-r from-rose-500 to-red-600 h-full transition-all duration-500";
-            }
-
-            const monthlyTx = state.transactions.filter(t => t.date.substring(0, 7) === state.viewedMonth);
-            document.getElementById('stat-spent-count').textContent = `${monthlyTx.length} expenses logged`;
-
-            renderProjectionCard(currentData);
-
-            const recentContainer = document.getElementById('dashboard-recent-transactions');
-            const sortedTx = [...monthlyTx].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-
-            if (sortedTx.length === 0) {
-                recentContainer.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">No transactions logged this month.</div>`;
-            } else {
-                recentContainer.innerHTML = sortedTx.map(t => {
-                    const formattedDate = formatDateTimeString(t.date);
-                    return `
-                    <div class="flex items-center justify-between p-4 hover:bg-slate-800/40 transition">
-                        <div class="flex items-center space-x-3 min-w-0">
-                            <div class="p-2 bg-slate-900 rounded-xl border border-slate-800 text-slate-400 shrink-0">
-                                <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-sm font-semibold text-slate-100 truncate">${escapeHTML(t.description)}</p>
-                                <p class="text-[10px] text-slate-500">${formattedDate}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-4">
-                            <span class="text-sm font-bold font-mono text-slate-200">${formatIQD(t.amount)}</span>
-                            <button onclick="triggerDeleteExpense('${t.id}')" class="p-1.5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 rounded-lg transition" title="Delete entry">
-                                <i data-lucide="trash" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                    </div>
-                    `;
-                }).join('');
-            }
-
-            lucide.createIcons();
-        }
-
-        // PROJECTED BURNDOWN CALCULATIONS
-        function renderProjectionCard(currentData) {
-            const cardProj = document.getElementById('card-projection');
-            
-            if (state.viewedMonth !== state.currentRealMonth) {
-                cardProj.classList.add('opacity-40', 'pointer-events-none');
-                document.getElementById('projection-rest-val').textContent = "Not Active";
-                document.getElementById('projection-days-left-lbl').textContent = "View current month";
-                document.getElementById('projection-custom-val').textContent = "Not Active";
-                document.getElementById('projection-custom-daily-lbl').textContent = "Only available in current real month";
-                return;
-            }
-
-            cardProj.classList.remove('opacity-40', 'pointer-events-none');
-            updateProjectionUI(currentData);
-        }
-
-        function updateProjectionUI(providedData) {
-            const currentData = providedData || ledgerChain[state.viewedMonth] || { remaining: 0 };
-            const daysLeft = Math.max(state.daysInCurrentMonth - state.todayDay + 1, 1);
-            
-            const restVal = Math.max(currentData.remaining, 0);
-            const dailyRest = Math.round(restVal / daysLeft);
-            
-            document.getElementById('projection-rest-val').textContent = `${formatIQD(dailyRest)} / day`;
-            document.getElementById('projection-days-left-lbl').textContent = `${daysLeft} days remaining`;
-
-            const rangeInput = document.getElementById('range-custom-days');
-            const customDays = parseInt(rangeInput.value);
-            document.getElementById('range-days-val').textContent = `${customDays} Days`;
-            document.getElementById('projection-custom-days-title').textContent = `Next ${customDays} Days Quota`;
-
-            const dailyCustomAmount = Math.round(restVal / daysLeft);
-            const customTotalValue = dailyCustomAmount * Math.min(customDays, daysLeft);
-
-            document.getElementById('projection-custom-val').textContent = formatIQD(customTotalValue);
-            document.getElementById('projection-custom-daily-lbl').textContent = `${formatIQD(dailyCustomAmount)} per day`;
-        }
-
-        // RENDER TRANSACTIONS LIST
-        function renderTransactionsTab() {
-            const [y, m] = state.viewedMonth.split('-');
-            const dateObj = new Date(y, parseInt(m) - 1, 1);
-            document.getElementById('filter-current-month-lbl').textContent = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-            let filtered = state.transactions.filter(t => t.date.substring(0, 7) === state.viewedMonth);
-
-            const query = document.getElementById('tx-search').value.toLowerCase().trim();
-            if (query) {
-                filtered = filtered.filter(t => t.description.toLowerCase().includes(query));
-            }
-
-            const sortVal = document.getElementById('tx-sort').value;
-            if (sortVal === 'newest') {
-                filtered.sort((a, b) => b.date.localeCompare(a.date));
-            } else if (sortVal === 'oldest') {
-                filtered.sort((a, b) => a.date.localeCompare(b.date));
-            } else if (sortVal === 'highest') {
-                filtered.sort((a, b) => b.amount - a.amount);
-            } else if (sortVal === 'lowest') {
-                filtered.sort((a, b) => a.amount - b.amount);
-            }
-
-            const tbody = document.getElementById('transactions-table-body');
-            const emptyState = document.getElementById('transactions-empty-state');
-
-            if (filtered.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.classList.remove('hidden');
-            } else {
-                emptyState.classList.add('hidden');
-                tbody.innerHTML = filtered.map(t => {
-                    const formattedDate = formatDateTimeString(t.date);
-                    return `
-                    <tr class="hover:bg-slate-900/50 transition border-b border-[#1f2937]/30">
-                        <td class="py-3 px-4 font-mono text-xs text-slate-400">${formattedDate}</td>
-                        <td class="py-3 px-4">
-                            <span class="font-semibold text-slate-100">${escapeHTML(t.description)}</span>
-                        </td>
-                        <td class="py-3 px-4 text-right font-bold font-mono text-slate-200">${formatIQD(t.amount)}</td>
-                        <td class="py-3 px-4 text-center">
-                            <button onclick="triggerDeleteExpense('${t.id}')" class="p-1.5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 rounded-lg transition" title="Delete entry">
-                                <i data-lucide="trash" class="w-4.5 h-4.5"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    `;
-                }).join('');
-            }
-            
-            lucide.createIcons();
-        }
-
-        // RENDER CHARTS
-        function renderAnalyticsTab() {
-            const daysInMonth = new Date(parseInt(state.viewedMonth.split('-')[0]), parseInt(state.viewedMonth.split('-')[1]), 0).getDate();
-            const daysLabels = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-            const filteredTxs = state.transactions.filter(t => t.date.substring(0, 7) === state.viewedMonth);
-
-            let cumulative = 0;
-            const actualSpentPoints = [];
-            
-            let isCurrentMonth = state.viewedMonth === state.currentRealMonth;
-            let boundaryDay = isCurrentMonth ? state.todayDay : daysInMonth;
-
-            for (let d = 1; d <= daysInMonth; d++) {
-                const dayStr = String(d).padStart(2, '0');
-                const fullDayDate = `${state.viewedMonth}-${dayStr}`;
-                
-                const dayTotal = filteredTxs
-                    .filter(t => t.date.substring(0, 10) === fullDayDate)
-                    .reduce((sum, t) => sum + t.amount, 0);
-
-                if (d <= boundaryDay) {
-                    cumulative += dayTotal;
-                    actualSpentPoints.push(cumulative);
-                } else {
-                    actualSpentPoints.push(null);
-                }
-            }
-
-            const predictionPoints = Array(daysInMonth).fill(null);
-            if (isCurrentMonth) {
-                const currentTotalSpent = actualSpentPoints[boundaryDay - 1] || 0;
-                const averageDailySpend = boundaryDay > 0 ? (currentTotalSpent / boundaryDay) : 0;
-                
-                predictionPoints[boundaryDay - 1] = currentTotalSpent;
-                
-                for (let d = boundaryDay; d < daysInMonth; d++) {
-                    predictionPoints[d] = predictionPoints[d - 1] + averageDailySpend;
-                }
-
-                document.getElementById('burn-rate-desc').innerHTML = `Cumulative spend pattern compared to limit. Dashed line: <span class="text-teal-400 font-bold">Estimated projection: ${formatIQD(predictionPoints[daysInMonth-1] || 0)}</span>`;
-            } else {
-                document.getElementById('burn-rate-desc').textContent = "Showing final completed monthly expense trajectory";
-            }
-
-            if (burnRateChartInstance) burnRateChartInstance.destroy();
-            const ctxBurn = document.getElementById('chart-burn-rate').getContext('2d');
-            
-            const totalBudgetLimit = (ledgerChain[state.viewedMonth]?.totalBudget) || state.globalBaseBudget;
-            const budgetLinePoints = Array(daysInMonth).fill(totalBudgetLimit);
-
-            burnRateChartInstance = new Chart(ctxBurn, {
-                type: 'line',
-                data: {
-                    labels: daysLabels,
-                    datasets: [
-                        {
-                            label: 'Actual Spent (IQD)',
-                            data: actualSpentPoints,
-                            borderColor: '#10b981',
-                            backgroundColor: 'rgba(16, 185, 129, 0.05)',
-                            borderWidth: 3,
-                            tension: 0.1,
-                            fill: true,
-                            spanGaps: true
-                        },
-                        {
-                            label: 'Projected Spend rate',
-                            data: predictionPoints,
-                            borderColor: '#14b8a6',
-                            borderWidth: 2.5,
-                            borderDash: [6, 6],
-                            pointRadius: 0,
-                            tension: 0.1,
-                            spanGaps: true
-                        },
-                        {
-                            label: 'Total Budget Threshold',
-                            data: budgetLinePoints,
-                            borderColor: '#ef4444',
-                            borderWidth: 2,
-                            borderDash: [4, 4],
-                            pointRadius: 0,
-                            fill: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                            ticks: { color: '#94a3b8', font: { size: 9 } }
-                        },
-                        y: {
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                            ticks: { color: '#94a3b8', font: { size: 9 } }
-                        }
-                    },
-                    plugins: {
-                        legend: { display: false }
-                    }
-                }
-            });
-
-            // 6-MONTH CHART
-            const monthHistLabels = [];
-            const spentUnderLimitData = [];
-            const savedData = [];
-            const overspentData = [];
-
-            let iterDate = new Date(state.viewedMonth + "-15");
-            iterDate.setMonth(iterDate.getMonth() - 5);
-
-            for (let i = 0; i < 6; i++) {
-                const y = iterDate.getFullYear();
-                const m = String(iterDate.getMonth() + 1).padStart(2, '0');
-                const mStr = `${y}-${m}`;
-
-                const data = ledgerChain[mStr] || {
-                    totalBudget: state.globalBaseBudget,
-                    spent: 0,
-                    remaining: state.globalBaseBudget
-                };
-
-                const shortLabel = iterDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-                monthHistLabels.push(shortLabel);
-
-                if (data.spent <= data.totalBudget) {
-                    spentUnderLimitData.push(data.spent);
-                    savedData.push(data.remaining);
-                    overspentData.push(0);
-                } else {
-                    spentUnderLimitData.push(data.totalBudget);
-                    savedData.push(0);
-                    overspentData.push(data.spent - data.totalBudget);
-                }
-
-                iterDate.setMonth(iterDate.getMonth() + 1);
-            }
-
-            if (historyChartInstance) historyChartInstance.destroy();
-            const ctxHist = document.getElementById('chart-6month-history').getContext('2d');
-
-            historyChartInstance = new Chart(ctxHist, {
-                type: 'bar',
-                data: {
-                    labels: monthHistLabels,
-                    datasets: [
-                        {
-                            label: 'Within Budget Limit',
-                            data: spentUnderLimitData,
-                            backgroundColor: '#3b82f6',
-                        },
-                        {
-                            label: 'Overspent Excess',
-                            data: overspentData,
-                            backgroundColor: '#f43f5e',
-                        },
-                        {
-                            label: 'Saved Balance',
-                            data: savedData,
-                            backgroundColor: '#10b981',
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            stacked: true,
-                            grid: { display: false },
-                            ticks: { color: '#94a3b8', font: { size: 9 } }
-                        },
-                        y: {
-                            stacked: true,
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                            ticks: { color: '#94a3b8', font: { size: 9 } }
-                        }
-                    },
-                    plugins: {
-                        legend: { display: false }
-                    }
-                }
-            });
-
-            // Metrics
-            const daysActive = new Set(filteredTxs.map(t => t.date.substring(0, 10)));
-            const activeDaysCount = Math.max(daysActive.size, 1);
-            const totalSpentThisMonth = filteredTxs.reduce((sum, t) => sum + t.amount, 0);
-            const dailyAvg = Math.round(totalSpentThisMonth / activeDaysCount);
-
-            document.getElementById('metric-daily-avg').textContent = formatIQD(dailyAvg);
-            document.getElementById('metric-daily-count').textContent = `Over ${activeDaysCount} active days`;
-
-            if (filteredTxs.length > 0) {
-                const maxExpense = Math.max(...filteredTxs.map(t => t.amount));
-                document.getElementById('metric-highest').textContent = formatIQD(maxExpense);
-                
-                const topTx = filteredTxs.find(t => t.amount === maxExpense);
-                document.getElementById('metric-highest-desc').textContent = `"${topTx.description}"`;
-            } else {
-                document.getElementById('metric-highest').textContent = "0 IQD";
-                document.getElementById('metric-highest-desc').textContent = "No expenses recorded";
-            }
-
-            const currentViewData = ledgerChain[state.viewedMonth] || { remaining: 0 };
-            document.getElementById('metric-velocity').textContent = formatIQD(currentViewData.remaining);
-        }
-
-        // SETTINGS SYNC PANELS
-        function renderSettingsTab() {
-            const [y, m] = state.viewedMonth.split('-');
-            const dateObj = new Date(y, parseInt(m) - 1, 1);
-            const formattedMonth = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-            document.getElementById('lbl-override-focus').textContent = formattedMonth;
-            document.getElementById('lbl-infusion-month').textContent = formattedMonth;
-
-            document.getElementById('input-base-budget').value = state.globalBaseBudget;
-            
-            const overrideVal = state.monthBudgets[state.viewedMonth];
-            document.getElementById('input-month-override').value = overrideVal !== undefined ? overrideVal : "";
-            document.getElementById('input-month-override').placeholder = `Inherited default (${formatIQD(state.globalBaseBudget)})`;
-
-            document.getElementById('input-extra-funds').value = state.extraFunds[state.viewedMonth] || "";
-        }
-
-        // TRIGGER CONTROL WRITES TO CLOUD
-        async function updateGlobalBaseBudget() {
-            const inputVal = parseFloat(document.getElementById('input-base-budget').value);
-            if (isNaN(inputVal) || inputVal < 0) {
-                showToast("Please supply a valid base budget.");
-                return;
-            }
-            state.globalBaseBudget = inputVal;
-            await syncConfigToCloud();
-            showToast("Global budget updated and Synced!");
-        }
-
-        async function updateMonthOverride() {
-            const inputVal = document.getElementById('input-month-override').value;
-            if (inputVal.trim() === "") {
-                delete state.monthBudgets[state.viewedMonth];
-                showToast("Reverted to default budget template.");
-            } else {
-                const parsedVal = parseFloat(inputVal);
-                if (isNaN(parsedVal) || parsedVal < 0) {
-                    showToast("Please enter a valid amount.");
-                    return;
-                }
-                state.monthBudgets[state.viewedMonth] = parsedVal;
-                showToast("Month override synced!");
-            }
-            await syncConfigToCloud();
-        }
-
-        async function updateExtraFunds() {
-            const inputVal = document.getElementById('input-extra-funds').value;
-            if (inputVal.trim() === "" || parseFloat(inputVal) === 0) {
-                delete state.extraFunds[state.viewedMonth];
-                showToast("Cleared extra cash infusion.");
-            } else {
-                const parsedVal = parseFloat(inputVal);
-                if (isNaN(parsedVal) || parsedVal < 0) {
-                    showToast("Please specify a valid value.");
-                    return;
-                }
-                state.extraFunds[state.viewedMonth] = parsedVal;
-                showToast("Extra infusion Synced!");
-            }
-            await syncConfigToCloud();
-        }
-
-        // TRANSACTION ACTIONS
-        function openTransactionModal() {
-            const modal = document.getElementById('modal-transaction');
-            const box = document.getElementById('modal-tx-box');
-            
-            document.getElementById('tx-amount').value = "";
-            document.getElementById('tx-desc').value = "food";
-            document.getElementById('tx-date').value = getLocalDateTimeString();
-            document.getElementById('tx-form-error').classList.add('hidden');
-            document.getElementById('tx-date-warning-msg').textContent = "";
-
-            modal.classList.remove('opacity-0', 'pointer-events-none');
-            box.classList.remove('scale-95');
-            box.classList.add('scale-100');
-        }
-
-        function closeTransactionModal() {
-            const modal = document.getElementById('modal-transaction');
-            const box = document.getElementById('modal-tx-box');
-            modal.classList.add('opacity-0', 'pointer-events-none');
-            box.classList.remove('scale-100');
-            box.classList.add('scale-95');
-        }
-
-        function setTxDescChip(category) {
-            document.getElementById('tx-desc').value = category;
-        }
-
-        function checkTxDateWarning() {
-            const dateVal = document.getElementById('tx-date').value;
-            const warningLbl = document.getElementById('tx-date-warning-msg');
-            
-            if (!dateVal) return;
-            
-            const pickedMonthStr = dateVal.substring(0, 7);
-            if (pickedMonthStr !== state.viewedMonth) {
-                const [y, m] = pickedMonthStr.split('-');
-                const dObj = new Date(y, parseInt(m) - 1, 1);
-                const readableName = dObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                warningLbl.textContent = `Warning: This expense will be stored in ${readableName}.`;
-            } else {
-                warningLbl.textContent = "";
-            }
-        }
-
-        async function saveTransactionForm() {
-            const amount = parseFloat(document.getElementById('tx-amount').value);
-            const description = document.getElementById('tx-desc').value.trim();
-            const dateVal = document.getElementById('tx-date').value;
-            const errorBox = document.getElementById('tx-form-error');
-            const errorLbl = document.getElementById('tx-error-msg');
-
-            if (isNaN(amount) || amount <= 0) {
-                errorLbl.textContent = "Please provide an amount greater than 0 IQD.";
-                errorBox.classList.remove('hidden');
-                return;
-            }
-            if (!description) {
-                errorLbl.textContent = "Description is required.";
-                errorBox.classList.remove('hidden');
-                return;
-            }
-            if (!dateVal) {
-                errorLbl.textContent = "Please pick a valid timestamp.";
-                errorBox.classList.remove('hidden');
-                return;
-            }
-
-            const newTx = {
-                id: crypto.randomUUID(),
-                amount,
-                description,
-                date: dateVal
-            };
-
-            await syncTransactionToCloud(newTx);
-            
-            const txMonthStr = dateVal.substring(0, 7);
-            if (txMonthStr !== state.viewedMonth) {
-                state.viewedMonth = txMonthStr;
-            }
-
-            closeTransactionModal();
-            updateUI();
-            showToast("New transaction logged and Synced!");
-        }
-
-        function triggerDeleteExpense(id) {
-            activeDeleteId = id;
-            
-            const modal = document.getElementById('modal-delete');
-            const box = document.getElementById('modal-delete-box');
-
-            modal.classList.remove('opacity-0', 'pointer-events-none');
-            box.classList.remove('scale-95');
-            box.classList.add('scale-100');
-
-            document.getElementById('btn-confirm-delete').onclick = confirmDeleteExpense;
-        }
-
-        function closeDeleteModal() {
-            const modal = document.getElementById('modal-delete');
-            const box = document.getElementById('modal-delete-box');
-            modal.classList.add('opacity-0', 'pointer-events-none');
-            box.classList.remove('scale-100');
-            box.classList.add('scale-95');
-            activeDeleteId = null;
-        }
-
-        async function confirmDeleteExpense() {
-            if (!activeDeleteId) return;
-
-            await deleteTransactionFromCloud(activeDeleteId);
-            
-            closeDeleteModal();
-            updateUI();
-            showToast("Transaction deleted from Cloud!");
-        }
-
-        function triggerWipeModal() {
-            const modal = document.getElementById('modal-wipe');
-            const box = document.getElementById('modal-wipe-box');
-            document.getElementById('input-wipe-verify').value = "";
-            document.getElementById('wipe-error-lbl').classList.add('hidden');
-
-            modal.classList.remove('opacity-0', 'pointer-events-none');
-            box.classList.remove('scale-95');
-            box.classList.add('scale-100');
-        }
-
-        function closeWipeModal() {
-            const modal = document.getElementById('modal-wipe');
-            const box = document.getElementById('modal-wipe-box');
-            modal.classList.add('opacity-0', 'pointer-events-none');
-            box.classList.remove('scale-100');
-            box.classList.add('scale-95');
-        }
-
-        async function confirmWipeData() {
-            const val = document.getElementById('input-wipe-verify').value.trim().toUpperCase();
-            if (val !== "WIPE") {
-                document.getElementById('wipe-error-lbl').classList.remove('hidden');
-                return;
-            }
-
-            // Wipe remote configs
-            state.globalBaseBudget = DEFAULT_GLOBAL_BASE;
-            state.monthBudgets = {};
-            state.extraFunds = {};
-            await syncConfigToCloud();
-
-            // Clear remote transactions
-            for (let tx of state.transactions) {
-                await deleteTransactionFromCloud(tx.id);
-            }
-
-            closeWipeModal();
-            updateUI();
-            showToast("Cloud Database wiped completely!");
-        }
-
-        // OFFLINE BACKUPS AND JSON RESTORES
-        function exportDataJSON() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
-            const dlAnchorElem = document.createElement('a');
-            dlAnchorElem.setAttribute("href", dataStr);
-            dlAnchorElem.setAttribute("download", `iqd_cloud_backup_${state.currentRealMonth}.json`);
-            dlAnchorElem.click();
-            showToast("Backup downloaded!");
-        }
-
-        async function importDataJSON(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                try {
-                    const parsed = JSON.parse(e.target.result);
-                    
-                    if (typeof parsed.globalBaseBudget === 'number') {
-                        // Clear existing
-                        for (let tx of state.transactions) {
-                            await deleteTransactionFromCloud(tx.id);
-                        }
-
-                        state.globalBaseBudget = parsed.globalBaseBudget;
-                        state.monthBudgets = parsed.monthBudgets || {};
-                        state.extraFunds = parsed.extraFunds || {};
-                        await syncConfigToCloud();
-
-                        const newTxs = parsed.transactions || [];
-                        for (let tx of newTxs) {
-                            await syncTransactionToCloud(tx);
-                        }
-
-                        showToast("Imported data and fully synced to cloud!");
-                    } else {
-                        showToast("Invalid JSON Backup format.");
-                    }
-                } catch (err) {
-                    showToast("Failed reading import database.");
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        // TOOL UTILITIES
-        let toastTimeout = null;
-        function showToast(message) {
-            const toast = document.getElementById('toast-message');
-            document.getElementById('toast-text').textContent = message;
-            
-            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-20');
-            toast.classList.add('translate-y-0');
-
-            if (toastTimeout) clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => {
-                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-20');
-                toast.classList.remove('translate-y-0');
-            }, 3000);
-        }
-
-        function copyUIDToClipboard() {
-            const activeId = state.syncUid;
-            if (!activeId) return;
-            
-            const temp = document.createElement("textarea");
-            temp.value = activeId;
-            document.body.appendChild(temp);
-            temp.select();
-            
-            try {
-                document.execCommand('copy');
-                showToast("User Sync Code copied to clipboard!");
-            } catch (err) {
-                showToast("Failed to copy code.");
-            }
-            document.body.removeChild(temp);
-        }
-
-        function formatIQD(num) {
-            return new Intl.NumberFormat('en-US').format(num) + ' IQD';
-        }
-
-        // Fix datetime-local default formats safely
-        function getLocalDateTimeString() {
-            const now = new Date();
-            const y = now.getFullYear();
-            const m = String(now.getMonth() + 1).padStart(2, '0');
-            const d = String(now.getDate()).padStart(2, '0');
-            const h = String(now.getHours()).padStart(2, '0');
-            const min = String(now.getMinutes()).padStart(2, '0');
-            return `${y}-${m}-${d}T${h}:${min}`;
-        }
-
-        function formatDateTimeString(dateTimeStr) {
-            const parts = dateTimeStr.split('T');
-            const datePart = parts[0];
-            const timePart = parts[1] || "00:00";
-            
-            const [y, m, d] = datePart.split('-');
-            const [h, min] = timePart.split(':');
-            
-            const dateObj = new Date(y, m - 1, d, h, min);
-            return dateObj.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-
-        function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, 
-                tag => ({
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    "'": '&#39;',
-                    '"': '&quot;'
-                }[tag] || tag)
-            );
-        }
-
-        // EXPOSE ACTIONS TO THE MODULE WINDOW LEVEL
-        window.switchTab = switchTab;
-        window.changeMonth = changeMonth;
-        window.jumpToToday = jumpToToday;
-        window.updateProjectionUI = updateProjectionUI;
-        window.updateGlobalBaseBudget = updateGlobalBaseBudget;
-        window.updateMonthOverride = updateMonthOverride;
-        window.updateExtraFunds = updateExtraFunds;
-        window.exportDataJSON = exportDataJSON;
-        window.importDataJSON = importDataJSON;
-        window.openTransactionModal = openTransactionModal;
-        window.closeTransactionModal = closeTransactionModal;
-        window.setTxDescChip = setTxDescChip;
-        window.triggerDeleteExpense = triggerDeleteExpense;
-        window.closeDeleteModal = closeDeleteModal;
-        window.triggerWipeModal = triggerWipeModal;
-        window.closeWipeModal = closeWipeModal;
-        window.confirmWipeData = confirmWipeData;
-        window.copyUIDToClipboard = copyUIDToClipboard;
-        window.pairDeviceUID = pairDeviceUID;
-        window.resetPairingUID = resetPairingUID;
-    </script>
+      };
+      reader.readAsText(file);
+    }
+
+    // --- REUSABLE TOAST NOTIFICATION STACK ---
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      
+      // Dynamic Styling based on Contexts
+      let bgTheme = 'bg-slate-900 border-emerald-500/30 text-emerald-400';
+      let iconName = 'check-circle';
+
+      if (type === 'error') {
+        bgTheme = 'bg-slate-900 border-rose-500/30 text-rose-400';
+        iconName = 'alert-octagon';
+      } else if (type === 'info') {
+        bgTheme = 'bg-slate-900 border-sky-500/30 text-sky-400';
+        iconName = 'info';
+      }
+
+      toast.className = `flex items-center gap-3 px-4 py-3 bg-slate-900 border rounded-xl shadow-2xl transition-all duration-300 transform translate-y-2 opacity-0 select-none pointer-events-auto ${bgTheme}`;
+      toast.innerHTML = `
+        <i data-lucide="${iconName}" class="w-4.5 h-4.5 shrink-0"></i>
+        <span class="text-xs font-bold text-slate-100">${message}</span>
+      `;
+
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      // Trigger animation
+      setTimeout(() => {
+        toast.className = toast.className.replace('translate-y-2 opacity-0', 'translate-y-0 opacity-100');
+      }, 50);
+
+      // Kill Animation and Element
+      setTimeout(() => {
+        toast.className = toast.className.replace('translate-y-0 opacity-100', 'translate-y-2 opacity-0');
+        setTimeout(() => {
+          toast.remove();
+        }, 300);
+      }, 3500);
+    }
+
+  </script>
 </body>
 </html>
+
+
