@@ -97,7 +97,7 @@
                     <span id="cloud-status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
                 </div>
                 <div class="text-sm font-bold text-slate-200 truncate" id="cloud-status-text">Connecting...</div>
-                <div class="text-[9px] font-mono text-slate-500 truncate select-all hover:text-slate-300 transition" id="cloud-uid-display" title="Click to select and copy User Sync ID">Initializing ID...</div>
+                <div class="text-[9px] font-mono text-slate-500 truncate select-all hover:text-slate-300 transition" id="cloud-uid-display" title="Active Sync ID">Initializing ID...</div>
             </div>
         </aside>
 
@@ -440,29 +440,33 @@
                     <!-- Cloud Connection and Backup Details -->
                     <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6 space-y-6">
                         <div>
-                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300">Sync Information</h3>
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300">Sync Information & Multi-Device Pairing</h3>
                             <p class="text-xs text-slate-500 mt-1">Your ledger is securely backing up automatically to Firestore under your private cloud workspace.</p>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-900/50 p-5 rounded-xl border border-slate-800">
-                            <div class="space-y-2">
-                                <div class="text-xs text-slate-400 font-bold uppercase">Private User Sync Code</div>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Left Card: Copy UID -->
+                            <div class="bg-slate-900/50 p-5 rounded-xl border border-slate-800 space-y-3">
+                                <div class="text-xs text-slate-400 font-bold uppercase">This Device Sync Code</div>
                                 <div class="flex items-center space-x-2">
                                     <div class="bg-slate-950 px-3 py-2 rounded-lg text-xs font-mono text-emerald-400 truncate select-all flex-1" id="settings-uid-display">Retrieving status...</div>
                                     <button onclick="copyUIDToClipboard()" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition" title="Copy Sync ID">
                                         <i data-lucide="copy" class="w-4 h-4"></i>
                                     </button>
                                 </div>
-                                <p class="text-[10px] text-slate-500 leading-relaxed">Use this unique identifier code to cross-pair desktop or mobile systems directly into your personal budget database stream.</p>
+                                <p class="text-[10px] text-slate-500 leading-relaxed">Copy this code from your primary device (e.g., iPad) to paste it on your secondary device (e.g., Phone) to link them.</p>
                             </div>
 
-                            <div class="flex flex-col justify-center space-y-2">
-                                <div class="flex items-center space-x-2 text-xs font-bold text-slate-300">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500" id="settings-status-dot"></span>
-                                    <span id="settings-status-text">Cloud Connection Active</span>
+                            <!-- Right Card: Pair External UID -->
+                            <div class="bg-slate-900/50 p-5 rounded-xl border border-slate-800 space-y-3 flex flex-col justify-between">
+                                <div class="text-xs text-slate-400 font-bold uppercase">Pair External Device Ledger</div>
+                                <div class="flex space-x-2">
+                                    <input type="text" id="input-pair-uid" placeholder="Paste Sync Code from other device..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                                    <button onclick="pairDeviceUID()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-[#090d16] font-bold rounded-xl text-xs transition">Pair</button>
                                 </div>
-                                <div class="text-[11px] text-slate-400">
-                                    Any change, deletion, or ledger adjustments will seamlessly reflect instantly on all connected browsers.
+                                <div class="flex items-center justify-between text-[10px]">
+                                    <span id="pairing-status-desc" class="text-slate-500">Using local device ID.</span>
+                                    <button onclick="resetPairingUID()" id="btn-unlink-uid" class="hidden text-rose-400 hover:underline font-bold">Unlink Device</button>
                                 </div>
                             </div>
                         </div>
@@ -677,7 +681,8 @@
             activeTab: "dashboard",
             currentRealMonth: "2026-06",
             todayDay: 25,
-            daysInCurrentMonth: 30
+            daysInCurrentMonth: 30,
+            syncUid: null // Overridden Sync ID
         };
 
         let ledgerChain = {};
@@ -705,26 +710,27 @@
             state.todayDay = today.getDate();
             state.daysInCurrentMonth = new Date(y, today.getMonth() + 1, 0).getDate();
             state.viewedMonth = state.currentRealMonth;
+            
+            // Look for previously paired sync ID override in localStorage
+            const savedPairId = localStorage.getItem('custom_sync_uid');
+            if (savedPairId) {
+                state.syncUid = savedPairId;
+            }
         }
 
         // Authentication & Session pairing (RULE 3 - Auth Before Queries)
         async function initAuthSession() {
             onAuthStateChanged(auth, (user) => {
                 if (user) {
-                    // Update connection status graphics
-                    document.getElementById('cloud-status-text').textContent = "Connected & Synced";
-                    document.getElementById('cloud-status-dot').className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
-                    document.getElementById('cloud-uid-display').textContent = user.uid;
+                    // If no manually paired syncUid is assigned, fall back to this device's own authenticated anonymous UID
+                    if (!state.syncUid) {
+                        state.syncUid = user.uid;
+                    }
 
-                    document.getElementById('settings-status-text').textContent = "Cloud Sync Active";
-                    document.getElementById('settings-status-dot').className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
-                    document.getElementById('settings-uid-display').textContent = user.uid;
+                    updateSyncUIStatus();
 
-                    document.getElementById('mobile-cloud-status').textContent = "Synced";
-                    document.getElementById('mobile-cloud-dot').className = "w-2 h-2 rounded-full bg-emerald-500";
-
-                    // Bind listeners matching current user
-                    bindCloudListeners(user);
+                    // Bind listeners matching paired/current user workspace
+                    bindCloudListeners();
                 } else {
                     document.getElementById('cloud-status-text').textContent = "Authenticating...";
                     document.getElementById('cloud-status-dot').className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
@@ -744,14 +750,45 @@
             }
         }
 
+        function updateSyncUIStatus() {
+            const activeId = state.syncUid || "Initializing...";
+            const isCustom = localStorage.getItem('custom_sync_uid') !== null;
+
+            document.getElementById('cloud-status-text').textContent = isCustom ? "Synced (Paired)" : "Connected & Synced";
+            document.getElementById('cloud-status-dot').className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+            document.getElementById('cloud-uid-display').textContent = activeId;
+
+            document.getElementById('settings-status-text').textContent = isCustom ? "Linked External Workspace" : "Cloud Sync Active";
+            document.getElementById('settings-status-dot').className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+            document.getElementById('settings-uid-display').textContent = activeId;
+
+            document.getElementById('mobile-cloud-status').textContent = isCustom ? "Paired" : "Synced";
+            document.getElementById('mobile-cloud-dot').className = "w-2 h-2 rounded-full bg-emerald-500";
+
+            // Update Pairing Status labels in Settings Tab
+            const pairDesc = document.getElementById('pairing-status-desc');
+            const unlinkBtn = document.getElementById('btn-unlink-uid');
+            if (isCustom) {
+                pairDesc.textContent = "Currently linked to paired workspace.";
+                pairDesc.className = "text-emerald-400 font-bold";
+                unlinkBtn.classList.remove('hidden');
+            } else {
+                pairDesc.textContent = "Using local device ID.";
+                pairDesc.className = "text-slate-500";
+                unlinkBtn.classList.add('hidden');
+            }
+        }
+
         // REAL-TIME FIRESTORE WORKSPACE SYNCHRONIZATION
         // Rule 1 Compliance: Paths are structured under private users: /artifacts/{appId}/users/{userId}/{collectionName}
-        function bindCloudListeners(currentUser) {
+        function bindCloudListeners() {
             if (unsubConfig) unsubConfig();
             if (unsubTransactions) unsubTransactions();
 
+            if (!state.syncUid) return;
+
             // Realtime user configurations document listener
-            const configDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'config', 'userSettings');
+            const configDocRef = doc(db, 'artifacts', appId, 'users', state.syncUid, 'config', 'userSettings');
             unsubConfig = onSnapshot(configDocRef, (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
@@ -769,7 +806,7 @@
             });
 
             // Realtime transactions list listener (Rule 2 Compliance: Plain Collection snapshots, no complex query operators)
-            const txColRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'transactions');
+            const txColRef = collection(db, 'artifacts', appId, 'users', state.syncUid, 'transactions');
             unsubTransactions = onSnapshot(txColRef, (snap) => {
                 const list = [];
                 snap.forEach((doc) => {
@@ -785,8 +822,8 @@
 
         // Sync local adjustments to the Cloud settings document
         async function syncConfigToCloud() {
-            if (!auth.currentUser) return;
-            const ref = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'config', 'userSettings');
+            if (!state.syncUid) return;
+            const ref = doc(db, 'artifacts', appId, 'users', state.syncUid, 'config', 'userSettings');
             try {
                 await setDoc(ref, {
                     globalBaseBudget: state.globalBaseBudget,
@@ -800,8 +837,8 @@
 
         // Sync a transaction to the Cloud collection
         async function syncTransactionToCloud(tx) {
-            if (!auth.currentUser) return;
-            const ref = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'transactions', tx.id);
+            if (!state.syncUid) return;
+            const ref = doc(db, 'artifacts', appId, 'users', state.syncUid, 'transactions', tx.id);
             try {
                 await setDoc(ref, {
                     amount: tx.amount,
@@ -815,13 +852,48 @@
 
         // Remove a transaction from the Cloud collection
         async function deleteTransactionFromCloud(txId) {
-            if (!auth.currentUser) return;
-            const ref = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'transactions', txId);
+            if (!state.syncUid) return;
+            const ref = doc(db, 'artifacts', appId, 'users', state.syncUid, 'transactions', txId);
             try {
                 await deleteDoc(ref);
             } catch (err) {
                 console.error("Failed removing transaction from cloud:", err);
             }
+        }
+
+        // LINKING DEVICE PAIRING FUNCTIONS
+        function pairDeviceUID() {
+            const pairInput = document.getElementById('input-pair-uid');
+            const targetId = pairInput.value.trim();
+
+            if (!targetId) {
+                showToast("Please paste a valid device Sync Code first!");
+                return;
+            }
+
+            if (auth.currentUser && targetId === auth.currentUser.uid) {
+                showToast("This is already your local device ID.");
+                return;
+            }
+
+            // Save UID Override to local storage
+            localStorage.setItem('custom_sync_uid', targetId);
+            state.syncUid = targetId;
+
+            pairInput.value = "";
+            updateSyncUIStatus();
+            bindCloudListeners();
+            showToast("Device linked! Syncing data...");
+        }
+
+        function resetPairingUID() {
+            // Remove storage override and fallback to original anonymous UID
+            localStorage.removeItem('custom_sync_uid');
+            state.syncUid = auth.currentUser ? auth.currentUser.uid : null;
+
+            updateSyncUIStatus();
+            bindCloudListeners();
+            showToast("Device unlinked. Switched back to local database.");
         }
 
         // LEDGER ENGINE (Sequential rollover cascading logic)
@@ -1663,11 +1735,11 @@
         }
 
         function copyUIDToClipboard() {
-            if (!auth.currentUser) return;
-            const uid = auth.currentUser.uid;
+            const activeId = state.syncUid;
+            if (!activeId) return;
             
             const temp = document.createElement("textarea");
-            temp.value = uid;
+            temp.value = activeId;
             document.body.appendChild(temp);
             temp.select();
             
@@ -1684,6 +1756,7 @@
             return new Intl.NumberFormat('en-US').format(num) + ' IQD';
         }
 
+        // Fix datetime-local default formats safely
         function getLocalDateTimeString() {
             const now = new Date();
             const y = now.getFullYear();
@@ -1742,7 +1815,8 @@
         window.closeWipeModal = closeWipeModal;
         window.confirmWipeData = confirmWipeData;
         window.copyUIDToClipboard = copyUIDToClipboard;
+        window.pairDeviceUID = pairDeviceUID;
+        window.resetPairingUID = resetPairingUID;
     </script>
 </body>
 </html>
-
