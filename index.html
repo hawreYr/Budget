@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sleek IQD Cumulative Budget Tracker</title>
+    <title>Sleek IQD Cumulative Budget Tracker (Cloud Synced)</title>
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -55,7 +55,7 @@
     <!-- APP WRAPPER -->
     <div class="flex flex-col md:flex-row min-h-screen">
 
-        <!-- DESKTOP SIDEBAR NAVIGATION (Hidden on Mobile) -->
+        <!-- DESKTOP SIDEBAR NAVIGATION -->
         <aside class="hidden md:flex flex-col w-72 bg-[#111827] border-r border-[#1f2937] p-6 shrink-0 justify-between">
             <div class="space-y-8">
                 <!-- Branding -->
@@ -65,7 +65,7 @@
                     </div>
                     <div>
                         <h1 class="text-lg font-bold bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">IQD Ledger</h1>
-                        <span class="text-xs text-slate-500 uppercase font-semibold tracking-wider">Cumulative Tracker</span>
+                        <span class="text-xs text-slate-500 uppercase font-semibold tracking-wider">Cloud Ledger Sync</span>
                     </div>
                 </div>
 
@@ -90,17 +90,18 @@
                 </nav>
             </div>
 
-            <!-- Global Stats Brief -->
+            <!-- Cloud Connection Panel -->
             <div class="bg-slate-900/50 border border-slate-800 p-4 rounded-xl space-y-3">
-                <div class="text-xs text-slate-500">GLOBAL SETTING</div>
-                <div class="flex justify-between items-center">
-                    <span class="text-sm font-semibold text-slate-300" id="sidebar-base-budget-lbl">160,000 IQD</span>
-                    <button onclick="switchTab('settings')" class="text-xs text-emerald-400 hover:underline">Change</button>
+                <div class="text-xs text-slate-500 uppercase font-semibold flex items-center justify-between">
+                    <span>Cloud Sync</span>
+                    <span id="cloud-status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
                 </div>
+                <div class="text-sm font-bold text-slate-200 truncate" id="cloud-status-text">Connecting...</div>
+                <div class="text-[9px] font-mono text-slate-500 truncate select-all hover:text-slate-300 transition" id="cloud-uid-display" title="Click to select and copy User Sync ID">Initializing ID...</div>
             </div>
         </aside>
 
-        <!-- MAIN MAIN PANEL -->
+        <!-- MAIN PANEL -->
         <main class="flex-1 flex flex-col min-h-screen relative overflow-x-hidden">
 
             <!-- MOBILE TOP HEADER -->
@@ -109,14 +110,15 @@
                     <div class="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg">
                         <i data-lucide="wallet" class="w-5 h-5"></i>
                     </div>
-                    <span class="font-bold text-slate-200">IQD Ledger</span>
+                    <span class="font-bold text-slate-200 text-sm">IQD Ledger</span>
                 </div>
-                <div id="mobile-top-stats" class="text-xs font-mono bg-slate-800 px-2 py-1 rounded text-emerald-400">
-                    Active Ledger
+                <div id="mobile-top-stats" class="text-xs font-mono bg-slate-800 px-2 py-1 rounded text-emerald-400 flex items-center space-x-1.5">
+                    <span id="mobile-cloud-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span id="mobile-cloud-status">Syncing</span>
                 </div>
             </header>
 
-            <!-- CONTROLLER / MONTH PICKER (Sticky Header across all devices) -->
+            <!-- CONTROLLER / MONTH PICKER (Sticky Header) -->
             <div class="bg-[#090d16] border-b border-[#1f2937]/50 px-4 md:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 sticky top-14 md:top-0 z-20 backdrop-blur-md bg-opacity-95">
                 <div class="flex items-center space-x-3">
                     <button onclick="changeMonth(-1)" class="p-2.5 bg-[#111827] hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-300 transition hover:text-white" title="Previous Month">
@@ -136,7 +138,7 @@
                 <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
                     <button onclick="jumpToToday()" id="btn-jump-today" class="hidden text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3.5 py-2 rounded-xl transition border border-slate-700/50 flex items-center space-x-1">
                         <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
-                        <span>Jump to Today</span>
+                        <span>Today</span>
                     </button>
                     <button onclick="openTransactionModal()" class="w-full sm:w-auto px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-[#090d16] font-bold rounded-xl transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/10">
                         <i data-lucide="plus-circle" class="w-4 h-4"></i>
@@ -151,7 +153,7 @@
                 <!-- TAB 1: DASHBOARD -->
                 <div id="tab-dashboard" class="space-y-6 tab-content">
                     
-                    <!-- TOP THREE SUMMARY CARDS -->
+                    <!-- SUMMARY CARDS -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <!-- Card 1: Remaining Balance -->
                         <div class="bg-gradient-to-br from-[#111827] to-[#151f32] border border-[#1f2937] rounded-2xl p-6 relative overflow-hidden group">
@@ -172,13 +174,13 @@
                         <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6 relative overflow-hidden">
                             <div class="flex items-center justify-between mb-4">
                                 <span class="text-sm text-slate-400 font-medium">Adjusted Budget</span>
-                                <button onclick="switchTab('settings')" class="text-slate-500 hover:text-slate-300 transition" title="Modify Month Configuration">
+                                <button onclick="switchTab('settings')" class="text-slate-500 hover:text-slate-300 transition" title="Modify Month Settings">
                                     <i data-lucide="pencil" class="w-4 h-4"></i>
                                 </button>
                             </div>
                             <div class="text-2xl md:text-3xl font-extrabold tracking-tight" id="stat-total-budget">0 IQD</div>
                             
-                            <!-- Breakdown details collapsible style -->
+                            <!-- Breakdown Details -->
                             <div class="mt-3 pt-2 border-t border-slate-800 space-y-1 text-xs text-slate-400">
                                 <div class="flex justify-between">
                                     <span>Base Budget:</span>
@@ -190,7 +192,7 @@
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Ledger Rollover:</span>
-                                    <span class="" id="breakdown-rollover">+0 IQD</span>
+                                    <span id="breakdown-rollover">+0 IQD</span>
                                 </div>
                             </div>
                         </div>
@@ -222,8 +224,8 @@
                         </div>
                     </div>
 
-                    <!-- PROJECTION & SAFE TO SPEND CALCULATOR (Strictly for Current Real-World Month) -->
-                    <div id="card-projection" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-6 relative overflow-hidden">
+                    <!-- PROJECTION & SAFE TO SPEND CALCULATOR -->
+                    <div id="card-projection" class="bg-[#111827] border border-slate-800/80 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-6 relative overflow-hidden">
                         <div class="space-y-4">
                             <div>
                                 <span class="text-xs font-bold uppercase tracking-wider text-teal-400">Current Month Intelligence</span>
@@ -246,7 +248,7 @@
                         </div>
 
                         <!-- Interactive Control Panel inside projection -->
-                        <div class="bg-[#111827] p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+                        <div class="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60 flex flex-col justify-between">
                             <div class="space-y-2">
                                 <label for="range-custom-days" class="text-xs font-medium text-slate-300 flex justify-between">
                                     <span>Adjust Forecast Window:</span>
@@ -262,7 +264,7 @@
 
                             <div class="mt-4 p-2.5 bg-[#090d16] rounded-lg border border-slate-800 text-[11px] text-slate-400 leading-relaxed">
                                 <i data-lucide="info" class="w-3.5 h-3.5 inline mr-1 text-emerald-400"></i>
-                                Adjusting the selector calculates short-term spending quotas so you do not pre-exhaust late month rollover.
+                                recalculates short-term spending quotas so you do not pre-exhaust late month rollover.
                             </div>
                         </div>
                     </div>
@@ -279,19 +281,18 @@
 
                         <!-- Card/List Container -->
                         <div class="bg-[#111827] border border-[#1f2937] rounded-2xl overflow-hidden divide-y divide-[#1f2937]" id="dashboard-recent-transactions">
-                            <!-- Populated dynamically -->
-                            <div class="p-6 text-center text-slate-500">No transactions recorded this month.</div>
+                            <div class="p-6 text-center text-slate-500">Retrieving ledger database...</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- TAB 2: TRANSACTIONS (Comprehensive List) -->
+                <!-- TAB 2: TRANSACTIONS -->
                 <div id="tab-transactions" class="space-y-6 tab-content hidden">
                     <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6">
                         <div class="flex flex-col lg:flex-row gap-4 items-center justify-between mb-6">
                             <div>
-                                <h2 class="text-lg font-bold text-white">Month Ledger Ledger</h2>
-                                <p class="text-xs text-slate-400 mt-1">Detailed filtering and search results for transactions in <span class="font-bold text-slate-200" id="filter-current-month-lbl">June 2026</span></p>
+                                <h2 class="text-lg font-bold text-white">Month Ledger</h2>
+                                <p class="text-xs text-slate-400 mt-1">Detailed filtering for transactions in <span class="font-bold text-slate-200" id="filter-current-month-lbl">June 2026</span></p>
                             </div>
                             
                             <!-- Search & Filter Controls -->
@@ -311,7 +312,7 @@
                             </div>
                         </div>
 
-                        <!-- Ledger Transactions Area -->
+                        <!-- Ledger Transactions Table -->
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
@@ -323,24 +324,21 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-[#1f2937]/50 text-sm" id="transactions-table-body">
-                                    <!-- Populated dynamically -->
+                                    <!-- Dynamic -->
                                 </tbody>
                             </table>
                         </div>
 
                         <div id="transactions-empty-state" class="hidden text-center py-12 text-slate-500">
                             <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 text-slate-600"></i>
-                            <p class="text-sm">No transactions match your current search queries.</p>
+                            <p class="text-sm">No transactions match your current search parameters.</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- TAB 3: ANALYTICS -->
                 <div id="tab-analytics" class="space-y-6 tab-content hidden">
-                    
-                    <!-- CHARTS GRID -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        
                         <!-- Line Chart: Monthly Burn Rate -->
                         <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6 flex flex-col justify-between">
                             <div>
@@ -378,10 +376,10 @@
                                 <div class="text-xl font-bold font-mono text-rose-400" id="metric-highest">0 IQD</div>
                                 <div class="text-[10px] text-slate-500" id="metric-highest-desc">No entries logged</div>
                             </div>
-                            <div class="space-y-1">
-                                <div class="text-xs text-slate-400 uppercase tracking-widest">Cumulative Rollover Velocity</div>
-                                <div class="text-xl font-bold font-mono text-teal-400" id="metric-velocity">0 IQD</div>
-                                <div class="text-[10px] text-slate-500">Rollover impact for future months</div>
+                            <div class="space-y-1 font-mono">
+                                <div class="text-xs text-slate-400 uppercase tracking-widest font-sans">Current Rollover Reserve</div>
+                                <div class="text-xl font-bold text-teal-400" id="metric-velocity">0 IQD</div>
+                                <div class="text-[10px] text-slate-500 font-sans">Accumulated to next months</div>
                             </div>
                         </div>
                     </div>
@@ -390,9 +388,8 @@
                 <!-- TAB 4: SETTINGS -->
                 <div id="tab-settings" class="space-y-6 tab-content hidden">
                     
-                    <!-- General Global & Month Specific Budgets -->
+                    <!-- Budgets Settings -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        
                         <!-- Base Budgets Panel -->
                         <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6 space-y-4">
                             <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300">Default & Overrides Configuration</h3>
@@ -440,45 +437,62 @@
                         </div>
                     </div>
 
-                    <!-- JSON Import / Export & Storage Utilities -->
-                    <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6">
-                        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 mb-4">Device Sync & Database Maintenance</h3>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <!-- Backup Utilities -->
-                            <div class="space-y-4">
-                                <div>
-                                    <h4 class="text-xs font-bold text-slate-400 uppercase">Backup / Export</h4>
-                                    <p class="text-xs text-slate-500 mt-1">Download your full financial ledger data as a standard `.json` document for safekeeping.</p>
-                                </div>
-                                <div class="flex flex-wrap gap-2">
-                                    <button onclick="exportDataJSON()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold rounded-xl text-xs transition flex items-center space-x-2">
-                                        <i data-lucide="download" class="w-4 h-4"></i>
-                                        <span>Download Database File</span>
-                                    </button>
-                                    <button onclick="copyDataToClipboard()" class="px-4 py-2.5 bg-slate-800/50 hover:bg-slate-800 text-slate-300 font-semibold rounded-xl text-xs transition flex items-center space-x-1.5 border border-slate-800">
-                                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                                        <span>Copy Raw JSON</span>
+                    <!-- Cloud Connection and Backup Details -->
+                    <div class="bg-[#111827] border border-[#1f2937] rounded-2xl p-6 space-y-6">
+                        <div>
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300">Sync Information</h3>
+                            <p class="text-xs text-slate-500 mt-1">Your ledger is securely backing up automatically to Firestore under your private cloud workspace.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-900/50 p-5 rounded-xl border border-slate-800">
+                            <div class="space-y-2">
+                                <div class="text-xs text-slate-400 font-bold uppercase">Private User Sync Code</div>
+                                <div class="flex items-center space-x-2">
+                                    <div class="bg-slate-950 px-3 py-2 rounded-lg text-xs font-mono text-emerald-400 truncate select-all flex-1" id="settings-uid-display">Retrieving status...</div>
+                                    <button onclick="copyUIDToClipboard()" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition" title="Copy Sync ID">
+                                        <i data-lucide="copy" class="w-4 h-4"></i>
                                     </button>
                                 </div>
+                                <p class="text-[10px] text-slate-500 leading-relaxed">Use this unique identifier code to cross-pair desktop or mobile systems directly into your personal budget database stream.</p>
                             </div>
 
-                            <!-- Import & Reset Utilities -->
-                            <div class="space-y-4">
-                                <div>
-                                    <h4 class="text-xs font-bold text-slate-400 uppercase">Restore Database</h4>
-                                    <p class="text-xs text-slate-500 mt-1">Select a previously backed up `.json` file to restore your entire database.</p>
+                            <div class="flex flex-col justify-center space-y-2">
+                                <div class="flex items-center space-x-2 text-xs font-bold text-slate-300">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500" id="settings-status-dot"></span>
+                                    <span id="settings-status-text">Cloud Connection Active</span>
                                 </div>
-                                <div class="flex flex-wrap gap-2">
-                                    <label class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold rounded-xl text-xs transition flex items-center space-x-2 cursor-pointer">
-                                        <i data-lucide="upload" class="w-4 h-4"></i>
-                                        <span>Choose JSON File</span>
-                                        <input type="file" id="btn-import-file" accept=".json" class="hidden" onchange="importDataJSON(event)">
-                                    </label>
-                                    
+                                <div class="text-[11px] text-slate-400">
+                                    Any change, deletion, or ledger adjustments will seamlessly reflect instantly on all connected browsers.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- JSON Backup and Wipe actions -->
+                        <div class="border-t border-slate-800/80 pt-6">
+                            <h4 class="text-xs font-bold text-slate-300 uppercase mb-4">Device Backup & Storage Utilities</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-3">
+                                    <div class="text-xs font-semibold text-slate-400">Offline JSON Backups</div>
+                                    <p class="text-xs text-slate-500">Download your entire financial ledger dataset as a portable configuration file.</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button onclick="exportDataJSON()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold rounded-xl text-xs transition flex items-center space-x-2">
+                                            <i data-lucide="download" class="w-4 h-4"></i>
+                                            <span>Export JSON File</span>
+                                        </button>
+                                        <label class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold rounded-xl text-xs transition flex items-center space-x-2 cursor-pointer">
+                                            <i data-lucide="upload" class="w-4 h-4"></i>
+                                            <span>Import JSON File</span>
+                                            <input type="file" id="btn-import-file" accept=".json" class="hidden" onchange="importDataJSON(event)">
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-3">
+                                    <div class="text-xs font-semibold text-rose-400">Wipe Cloud Ledger</div>
+                                    <p class="text-xs text-slate-500">Purge and erase all synchronized monthly transactions, cash overrides, and parameters from Firebase.</p>
                                     <button onclick="triggerWipeModal()" class="px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/20 font-semibold rounded-xl text-xs transition flex items-center space-x-1.5">
                                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                        <span>Wipe Database</span>
+                                        <span>Reset All Database</span>
                                     </button>
                                 </div>
                             </div>
@@ -524,7 +538,7 @@
             </div>
             <!-- Modal Body Form -->
             <div class="p-6 space-y-4">
-                <!-- Amount (Big numerical display) -->
+                <!-- Amount -->
                 <div class="space-y-1">
                     <label for="tx-amount" class="text-xs font-bold text-slate-400 uppercase">Expense Amount (IQD)</label>
                     <div class="relative">
@@ -556,13 +570,13 @@
                     <p class="text-[10px] text-amber-500 font-semibold" id="tx-date-warning-msg"></p>
                 </div>
 
-                <!-- Custom Alert/Validation Error Box -->
+                <!-- Custom Validation Alert -->
                 <div id="tx-form-error" class="hidden bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl text-xs text-rose-400 flex items-center space-x-2">
                     <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i>
-                    <span id="tx-error-msg">Please input correct values.</span>
+                    <span id="tx-error-msg">Please input valid parameters.</span>
                 </div>
             </div>
-            <!-- Modal Action Buttons -->
+            <!-- Modal Actions -->
             <div class="p-4 bg-[#0d121e] border-t border-slate-800 flex justify-end space-x-3">
                 <button onclick="closeTransactionModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 font-semibold rounded-xl text-xs transition">Cancel</button>
                 <button onclick="saveTransactionForm()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-[#090d16] font-bold rounded-xl text-xs transition flex items-center space-x-1.5">
@@ -582,7 +596,7 @@
                 </div>
                 <div>
                     <h3 class="text-base font-bold text-white">Delete Transaction?</h3>
-                    <p class="text-xs text-slate-400 mt-2 leading-relaxed">This action will permanently purge this entry from the system and immediately cascade adjustments down your entire cumulative ledger chain.</p>
+                    <p class="text-xs text-slate-400 mt-2 leading-relaxed">This action permanently deletes this entry from Firebase and automatically recalculates cumulative rollover factors.</p>
                 </div>
             </div>
             <div class="p-4 bg-[#0d121e] border-t border-slate-800 flex justify-end space-x-3">
@@ -600,8 +614,8 @@
                     <i data-lucide="octagon-alert" class="w-6 h-6"></i>
                 </div>
                 <div>
-                    <h3 class="text-lg font-bold text-white">Perform Complete Ledger Wipe?</h3>
-                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">This completely resets all transactions, special overrides, customized monthly parameters, and custom historical data. Your setup will revert to default states.</p>
+                    <h3 class="text-lg font-bold text-white">Perform Complete Cloud Wipe?</h3>
+                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">This completely resets all transactions, special overrides, customized monthly parameters, and custom historical data in Firebase. Your setup will revert to default states.</p>
                 </div>
                 
                 <div class="space-y-2 bg-slate-900 p-4 rounded-xl border border-slate-800">
@@ -617,87 +631,203 @@
         </div>
     </div>
 
-    <!-- POPUP STATUS NOTICE/TOAST (Custom replacement to avoid native blocks) -->
+    <!-- POPUP STATUS NOTICE/TOAST -->
     <div id="toast-message" class="fixed bottom-6 right-6 md:right-10 bg-slate-900 border border-emerald-500/30 px-5 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 max-w-sm transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 z-50">
         <div class="p-1 bg-emerald-500/10 text-emerald-400 rounded-lg">
             <i data-lucide="info" class="w-4 h-4"></i>
         </div>
-        <span class="text-xs text-slate-200" id="toast-text">Configuration Updated Successfully</span>
+        <span class="text-xs text-slate-200" id="toast-text">System Synced</span>
     </div>
 
-    <!-- ==================== LOGIC ENGINE (VANILLA JAVASCRIPT) ==================== -->
-    <script>
-        // Default Configs
+    <!-- ==================== LOGIC MODULE ==================== -->
+    <script type="module">
+        // Firebase Modular SDK Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Variable Configuration Defaults
         const DEFAULT_GLOBAL_BASE = 160000;
 
-        // Reactive Application State
+        // Firebase Configuration (Using provided user credentials with sandbox fallback validation checks)
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyD0L-3ixiamzMZdWr2E-3eIEpkhatNBp2c",
+            authDomain: "drugs-91763.firebaseapp.com",
+            projectId: "drugs-91763",
+            storageBucket: "drugs-91763.firebasestorage.app",
+            messagingSenderId: "405463489645",
+            appId: "1:405463489645:web:8b09e23c3c3a00a7ccb364",
+            measurementId: "G-2LZQ1ZBBQ1"
+        };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'drugs-91763';
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // State Machine
         const state = {
             globalBaseBudget: DEFAULT_GLOBAL_BASE,
-            monthBudgets: {}, // key: "YYYY-MM", val: Override Base Budget
-            extraFunds: {},   // key: "YYYY-MM", val: One-off infusion
-            transactions: [], // Array of { id, amount, description, date }
-            viewedMonth: "2026-06", // Starts at June 2026 based on prompt
+            monthBudgets: {}, 
+            extraFunds: {},   
+            transactions: [], 
+            viewedMonth: "2026-06", 
             activeTab: "dashboard",
             currentRealMonth: "2026-06",
             todayDay: 25,
             daysInCurrentMonth: 30
         };
 
-        // Complete Calculated Multi-month ledger chain database
-        let ledgerChain = {}; 
-        
-        // Modal & Delete context IDs
+        let ledgerChain = {};
         let activeDeleteId = null;
-
-        // ChartJS Variables
         let burnRateChartInstance = null;
         let historyChartInstance = null;
+        let unsubConfig = null;
+        let unsubTransactions = null;
 
-        // Initialize App on DOM Loaded
+        // AUTHENTICATION AND EVENT INITIALIZATION
         window.addEventListener('DOMContentLoaded', () => {
-            // Set dynamic system time checks if available
             initRealWorldTime();
-            // Load DB from LocalStorage
-            loadStateFromStorage();
-            // Recalculate Ledger Chain sequentially
-            recalculateLedgerChain();
-            // Bind navigation events
-            switchTab('dashboard');
-            // Populate dynamic UI fields & charts
+            initAuthSession();
             updateUI();
             
-            // Watch date inputs for cross-month warnings in transaction form
             document.getElementById('tx-date').addEventListener('change', checkTxDateWarning);
         });
 
-        // Parse/Detect Real Date
+        // Initialize Time values
         function initRealWorldTime() {
             const today = new Date();
             const y = today.getFullYear();
             const m = String(today.getMonth() + 1).padStart(2, '0');
             state.currentRealMonth = `${y}-${m}`;
             state.todayDay = today.getDate();
-            
-            // Days in current month calculation
             state.daysInCurrentMonth = new Date(y, today.getMonth() + 1, 0).getDate();
-            
-            // Default viewedMonth is set to match current system real month
             state.viewedMonth = state.currentRealMonth;
         }
 
-        // Jump directly back to current real month view
-        function jumpToToday() {
-            state.viewedMonth = state.currentRealMonth;
-            updateUI();
-            showToast("Returned to current month!");
+        // Authentication & Session pairing (RULE 3 - Auth Before Queries)
+        async function initAuthSession() {
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    // Update connection status graphics
+                    document.getElementById('cloud-status-text').textContent = "Connected & Synced";
+                    document.getElementById('cloud-status-dot').className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+                    document.getElementById('cloud-uid-display').textContent = user.uid;
+
+                    document.getElementById('settings-status-text').textContent = "Cloud Sync Active";
+                    document.getElementById('settings-status-dot').className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+                    document.getElementById('settings-uid-display').textContent = user.uid;
+
+                    document.getElementById('mobile-cloud-status').textContent = "Synced";
+                    document.getElementById('mobile-cloud-dot').className = "w-2 h-2 rounded-full bg-emerald-500";
+
+                    // Bind listeners matching current user
+                    bindCloudListeners(user);
+                } else {
+                    document.getElementById('cloud-status-text').textContent = "Authenticating...";
+                    document.getElementById('cloud-status-dot').className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
+                }
+            });
+
+            // Trigger actual authentication sign-in
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                try {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } catch (e) {
+                    console.error("Custom token signin failed, falling back anonymously", e);
+                    await signInAnonymously(auth);
+                }
+            } else {
+                await signInAnonymously(auth);
+            }
         }
 
-        // Sequential Multi-Month Cascading Engine (CRITICAL IMPLEMENTATION)
+        // REAL-TIME FIRESTORE WORKSPACE SYNCHRONIZATION
+        // Rule 1 Compliance: Paths are structured under private users: /artifacts/{appId}/users/{userId}/{collectionName}
+        function bindCloudListeners(currentUser) {
+            if (unsubConfig) unsubConfig();
+            if (unsubTransactions) unsubTransactions();
+
+            // Realtime user configurations document listener
+            const configDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'config', 'userSettings');
+            unsubConfig = onSnapshot(configDocRef, (snap) => {
+                if (snap.exists()) {
+                    const data = snap.data();
+                    state.globalBaseBudget = data.globalBaseBudget ?? DEFAULT_GLOBAL_BASE;
+                    state.monthBudgets = data.monthBudgets ?? {};
+                    state.extraFunds = data.extraFunds ?? {};
+                } else {
+                    // Create base default doc if empty
+                    syncConfigToCloud();
+                }
+                recalculateLedgerChain();
+                updateUI();
+            }, (err) => {
+                console.error("Config stream error:", err);
+            });
+
+            // Realtime transactions list listener (Rule 2 Compliance: Plain Collection snapshots, no complex query operators)
+            const txColRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'transactions');
+            unsubTransactions = onSnapshot(txColRef, (snap) => {
+                const list = [];
+                snap.forEach((doc) => {
+                    list.push({ id: doc.id, ...doc.data() });
+                });
+                state.transactions = list;
+                recalculateLedgerChain();
+                updateUI();
+            }, (err) => {
+                console.error("Transaction stream error:", err);
+            });
+        }
+
+        // Sync local adjustments to the Cloud settings document
+        async function syncConfigToCloud() {
+            if (!auth.currentUser) return;
+            const ref = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'config', 'userSettings');
+            try {
+                await setDoc(ref, {
+                    globalBaseBudget: state.globalBaseBudget,
+                    monthBudgets: state.monthBudgets,
+                    extraFunds: state.extraFunds
+                });
+            } catch (err) {
+                console.error("Failed writing budget adjustments to cloud:", err);
+            }
+        }
+
+        // Sync a transaction to the Cloud collection
+        async function syncTransactionToCloud(tx) {
+            if (!auth.currentUser) return;
+            const ref = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'transactions', tx.id);
+            try {
+                await setDoc(ref, {
+                    amount: tx.amount,
+                    description: tx.description,
+                    date: tx.date
+                });
+            } catch (err) {
+                console.error("Failed logging transaction to cloud:", err);
+            }
+        }
+
+        // Remove a transaction from the Cloud collection
+        async function deleteTransactionFromCloud(txId) {
+            if (!auth.currentUser) return;
+            const ref = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'transactions', txId);
+            try {
+                await deleteDoc(ref);
+            } catch (err) {
+                console.error("Failed removing transaction from cloud:", err);
+            }
+        }
+
+        // LEDGER ENGINE (Sequential rollover cascading logic)
         function recalculateLedgerChain() {
-            // Determine chronological starting point of history
-            let startMonth = "2026-01"; // Default fallback start window
+            let startMonth = "2026-01";
             
-            // Search all keys to find earliest entry to commence cascading safely
             const months = new Set([state.currentRealMonth, state.viewedMonth]);
             state.transactions.forEach(t => months.add(t.date.substring(0, 7)));
             Object.keys(state.monthBudgets).forEach(m => months.add(m));
@@ -708,22 +838,18 @@
                 startMonth = sortedMonths[0];
             }
 
-            // Generate full chronological sequence of month strings up to the currently viewed month (plus 1 buffer month)
             const targetUpperStr = state.viewedMonth > state.currentRealMonth ? state.viewedMonth : state.currentRealMonth;
             const chronologicalMonths = getMonthSequence(startMonth, targetUpperStr);
 
             let cumulativeRollover = 0;
             const newChain = {};
 
-            // Calculate monthly limits continuously
             chronologicalMonths.forEach(mStr => {
                 const base = state.monthBudgets[mStr] !== undefined ? state.monthBudgets[mStr] : state.globalBaseBudget;
                 const extra = state.extraFunds[mStr] || 0;
                 
-                // Total budget available this month
                 const totalBudget = base + extra + cumulativeRollover;
 
-                // Calculate cumulative spent within this month
                 const monthlyTx = state.transactions.filter(t => t.date.substring(0, 7) === mStr);
                 const spent = monthlyTx.reduce((sum, t) => sum + t.amount, 0);
                 
@@ -739,14 +865,12 @@
                     remaining
                 };
 
-                // The remaining cash acts as the continuous ledger rollover factor (positive or negative overspend)
                 cumulativeRollover = remaining;
             });
 
             ledgerChain = newChain;
         }
 
-        // Generate contiguous month codes [ '2026-01', '2026-02', ... ]
         function getMonthSequence(start, end) {
             const list = [];
             let current = new Date(start + "-01");
@@ -761,18 +885,14 @@
             return list;
         }
 
-        // Tab Navigation Router
+        // VIEW ROUTER
         function switchTab(tabId) {
             state.activeTab = tabId;
             
-            // Hide all contents
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            
-            // Show selected
             const activeTabContainer = document.getElementById(`tab-${tabId}`);
             if (activeTabContainer) activeTabContainer.classList.remove('hidden');
 
-            // Set desktop navigation button styling
             const sidebarTabs = ['dashboard', 'transactions', 'analytics', 'settings'];
             sidebarTabs.forEach(t => {
                 const btnSide = document.getElementById(`btn-sidebar-${t}`);
@@ -787,7 +907,6 @@
                 }
             });
 
-            // Re-render components on focus
             if (tabId === 'transactions') {
                 renderTransactionsTab();
             } else if (tabId === 'analytics') {
@@ -799,30 +918,32 @@
             }
         }
 
-        // Month Adjustments (Arrows)
         function changeMonth(dir) {
-            const curDate = new Date(state.viewedMonth + "-15"); // Day 15 prevents boundary errors
+            const curDate = new Date(state.viewedMonth + "-15");
             curDate.setMonth(curDate.getMonth() + dir);
             
             const y = curDate.getFullYear();
             const m = String(curDate.getMonth() + 1).padStart(2, '0');
             state.viewedMonth = `${y}-${m}`;
             
-            // Cascade recalculate
             recalculateLedgerChain();
             updateUI();
         }
 
-        // Master UI Sync Controller
+        function jumpToToday() {
+            state.viewedMonth = state.currentRealMonth;
+            recalculateLedgerChain();
+            updateUI();
+            showToast("Returned to current real-world ledger!");
+        }
+
         function updateUI() {
-            // Header Month text format
             const [y, m] = state.viewedMonth.split('-');
             const dateObj = new Date(y, parseInt(m) - 1, 1);
             const monthLabel = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
             
             document.getElementById('lbl-viewed-month').textContent = monthLabel;
             
-            // Sync status pills
             const statusPill = document.getElementById('lbl-status-pill');
             const btnJump = document.getElementById('btn-jump-today');
             if (state.viewedMonth === state.currentRealMonth) {
@@ -830,19 +951,16 @@
                 statusPill.className = "text-[10px] text-emerald-400 tracking-wider uppercase font-extrabold";
                 btnJump.classList.add('hidden');
             } else {
-                statusPill.textContent = "Archived Ledger";
+                statusPill.textContent = "Historical Archive";
                 statusPill.className = "text-[10px] text-amber-500 tracking-wider uppercase font-semibold";
                 btnJump.classList.remove('hidden');
             }
 
-            // Render current active layout tab
             switchTab(state.activeTab);
-            
-            // Refresh Icons on page
             lucide.createIcons();
         }
 
-        // RENDER: DASHBOARD DATA
+        // RENDER DASHBOARD
         function renderDashboardTab() {
             const currentData = ledgerChain[state.viewedMonth] || {
                 base: state.globalBaseBudget,
@@ -853,12 +971,10 @@
                 remaining: state.globalBaseBudget
             };
 
-            // Formatting values for IQD
             document.getElementById('stat-remaining-balance').textContent = formatIQD(currentData.remaining);
             document.getElementById('stat-total-budget').textContent = formatIQD(currentData.totalBudget);
             document.getElementById('stat-total-spent').textContent = formatIQD(currentData.spent);
 
-            // Set visual colors on Remaining Balance Card
             const balCard = document.getElementById('stat-remaining-balance').parentElement;
             const balBadge = document.getElementById('badge-balance-status');
             const balDesc = document.getElementById('stat-remaining-desc');
@@ -866,16 +982,15 @@
             if (currentData.remaining < 0) {
                 balCard.className = "bg-gradient-to-br from-[#111827] to-rose-950/20 border border-rose-900/40 rounded-2xl p-6 relative overflow-hidden group";
                 balBadge.className = "p-1.5 bg-rose-500/10 text-rose-400 rounded-lg text-xs font-bold";
-                balBadge.textContent = "Overdrawn";
-                balDesc.innerHTML = `<i data-lucide="info" class="w-3.5 h-3.5 inline mr-1 text-rose-400"></i> Over limit by ${formatIQD(Math.abs(currentData.remaining))}`;
+                balBadge.textContent = "Overspent";
+                balDesc.innerHTML = `<i data-lucide="info" class="w-3.5 h-3.5 inline mr-1 text-rose-400"></i> Over limits by ${formatIQD(Math.abs(currentData.remaining))}`;
             } else {
                 balCard.className = "bg-gradient-to-br from-[#111827] to-[#151f32] border border-[#1f2937] rounded-2xl p-6 relative overflow-hidden group";
                 balBadge.className = "p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg text-xs font-bold";
                 balBadge.textContent = "Healthy";
-                balDesc.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 inline mr-1 text-emerald-400"></i> Positive reserve rolling forward`;
+                balDesc.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 inline mr-1 text-emerald-400"></i> Positive balance rolling forward`;
             }
 
-            // Set Breakdown Text
             document.getElementById('breakdown-base').textContent = formatIQD(currentData.base);
             
             const extraEl = document.getElementById('breakdown-extra');
@@ -894,7 +1009,6 @@
                 rollEl.className = "text-slate-500";
             }
 
-            // Sync Exhaustion Progress Bar
             let spentPercent = 0;
             if (currentData.totalBudget > 0) {
                 spentPercent = Math.min(Math.round((currentData.spent / currentData.totalBudget) * 100), 150);
@@ -908,7 +1022,6 @@
             const progressFill = document.getElementById('progress-bar-fill');
             progressFill.style.width = `${Math.min(spentPercent, 100)}%`;
 
-            // Adjust progress bar colors relative to budget safety
             if (spentPercent < 70) {
                 progressFill.className = "bg-gradient-to-r from-emerald-500 to-emerald-400 h-full transition-all duration-500";
             } else if (spentPercent >= 70 && spentPercent < 90) {
@@ -919,19 +1032,16 @@
                 progressFill.className = "bg-gradient-to-r from-rose-500 to-red-600 h-full transition-all duration-500";
             }
 
-            // Transaction statistics descriptor
             const monthlyTx = state.transactions.filter(t => t.date.substring(0, 7) === state.viewedMonth);
-            document.getElementById('stat-spent-count').textContent = `${monthlyTx.length} expense entries registered`;
+            document.getElementById('stat-spent-count').textContent = `${monthlyTx.length} expenses logged`;
 
-            // Render safe to spend projection logic
             renderProjectionCard(currentData);
 
-            // Render Recent 5 Transactions feed inside dashboard
             const recentContainer = document.getElementById('dashboard-recent-transactions');
             const sortedTx = [...monthlyTx].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
 
             if (sortedTx.length === 0) {
-                recentContainer.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">No recent expense transactions log detected for this month.</div>`;
+                recentContainer.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">No transactions logged this month.</div>`;
             } else {
                 recentContainer.innerHTML = sortedTx.map(t => {
                     const formattedDate = formatDateTimeString(t.date);
@@ -948,7 +1058,7 @@
                         </div>
                         <div class="flex items-center space-x-4">
                             <span class="text-sm font-bold font-mono text-slate-200">${formatIQD(t.amount)}</span>
-                            <button onclick="triggerDeleteExpense('${t.id}')" class="p-1.5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 rounded-lg transition" title="Delete Entry">
+                            <button onclick="triggerDeleteExpense('${t.id}')" class="p-1.5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 rounded-lg transition" title="Delete entry">
                                 <i data-lucide="trash" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -957,23 +1067,19 @@
                 }).join('');
             }
 
-            // Refresh icons inside rendered list
             lucide.createIcons();
         }
 
-        // RENDER: CALCULATE SAFE TO SPEND CARDS
+        // PROJECTED BURNDOWN CALCULATIONS
         function renderProjectionCard(currentData) {
             const cardProj = document.getElementById('card-projection');
             
-            // Only active/visible during current real system calendar month
             if (state.viewedMonth !== state.currentRealMonth) {
                 cardProj.classList.add('opacity-40', 'pointer-events-none');
-                
-                // Set default static text
-                document.getElementById('projection-rest-val').textContent = "Inoperable";
-                document.getElementById('projection-days-left-lbl').textContent = "Not current month";
-                document.getElementById('projection-custom-val').textContent = "Inoperable";
-                document.getElementById('projection-custom-daily-lbl').textContent = "View current month to use";
+                document.getElementById('projection-rest-val').textContent = "Not Active";
+                document.getElementById('projection-days-left-lbl').textContent = "View current month";
+                document.getElementById('projection-custom-val').textContent = "Not Active";
+                document.getElementById('projection-custom-daily-lbl').textContent = "Only available in current real month";
                 return;
             }
 
@@ -981,27 +1087,21 @@
             updateProjectionUI(currentData);
         }
 
-        // Dynamically compute sliders & projected balance quotas
         function updateProjectionUI(providedData) {
             const currentData = providedData || ledgerChain[state.viewedMonth] || { remaining: 0 };
-            
-            // Calculating days left including today
             const daysLeft = Math.max(state.daysInCurrentMonth - state.todayDay + 1, 1);
             
-            // Rest of month projection
             const restVal = Math.max(currentData.remaining, 0);
             const dailyRest = Math.round(restVal / daysLeft);
             
             document.getElementById('projection-rest-val').textContent = `${formatIQD(dailyRest)} / day`;
             document.getElementById('projection-days-left-lbl').textContent = `${daysLeft} days remaining`;
 
-            // Custom sliding range calculations
             const rangeInput = document.getElementById('range-custom-days');
             const customDays = parseInt(rangeInput.value);
             document.getElementById('range-days-val').textContent = `${customDays} Days`;
             document.getElementById('projection-custom-days-title').textContent = `Next ${customDays} Days Quota`;
 
-            // Forecast limit available for custom window size
             const dailyCustomAmount = Math.round(restVal / daysLeft);
             const customTotalValue = dailyCustomAmount * Math.min(customDays, daysLeft);
 
@@ -1009,23 +1109,19 @@
             document.getElementById('projection-custom-daily-lbl').textContent = `${formatIQD(dailyCustomAmount)} per day`;
         }
 
-        // RENDER: TRANSACTIONS TAB
+        // RENDER TRANSACTIONS LIST
         function renderTransactionsTab() {
-            // Label month
             const [y, m] = state.viewedMonth.split('-');
             const dateObj = new Date(y, parseInt(m) - 1, 1);
             document.getElementById('filter-current-month-lbl').textContent = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-            // Filter transactions assigned solely to viewed month
             let filtered = state.transactions.filter(t => t.date.substring(0, 7) === state.viewedMonth);
 
-            // Apply Search Query
             const query = document.getElementById('tx-search').value.toLowerCase().trim();
             if (query) {
                 filtered = filtered.filter(t => t.description.toLowerCase().includes(query));
             }
 
-            // Apply Sorting
             const sortVal = document.getElementById('tx-sort').value;
             if (sortVal === 'newest') {
                 filtered.sort((a, b) => b.date.localeCompare(a.date));
@@ -1048,14 +1144,14 @@
                 tbody.innerHTML = filtered.map(t => {
                     const formattedDate = formatDateTimeString(t.date);
                     return `
-                    <tr class="hover:bg-slate-900/50 transition">
+                    <tr class="hover:bg-slate-900/50 transition border-b border-[#1f2937]/30">
                         <td class="py-3 px-4 font-mono text-xs text-slate-400">${formattedDate}</td>
                         <td class="py-3 px-4">
                             <span class="font-semibold text-slate-100">${escapeHTML(t.description)}</span>
                         </td>
                         <td class="py-3 px-4 text-right font-bold font-mono text-slate-200">${formatIQD(t.amount)}</td>
                         <td class="py-3 px-4 text-center">
-                            <button onclick="triggerDeleteExpense('${t.id}')" class="p-1.5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 rounded-lg transition" title="Delete Expense">
+                            <button onclick="triggerDeleteExpense('${t.id}')" class="p-1.5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 rounded-lg transition" title="Delete entry">
                                 <i data-lucide="trash" class="w-4.5 h-4.5"></i>
                             </button>
                         </td>
@@ -1064,23 +1160,19 @@
                 }).join('');
             }
             
-            // Reinitialize icons in tables
             lucide.createIcons();
         }
 
-        // RENDER: ANALYTICS CHARTS (Burn Rate + Stacked Bar History)
+        // RENDER CHARTS
         function renderAnalyticsTab() {
-            // Labels and daily statistics calculations
             const daysInMonth = new Date(parseInt(state.viewedMonth.split('-')[0]), parseInt(state.viewedMonth.split('-')[1]), 0).getDate();
             const daysLabels = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
             const filteredTxs = state.transactions.filter(t => t.date.substring(0, 7) === state.viewedMonth);
 
-            // Compute Daily Cumulative Spent
             let cumulative = 0;
             const actualSpentPoints = [];
             
-            // Identify dynamic boundary lines for "today" in viewed month context
             let isCurrentMonth = state.viewedMonth === state.currentRealMonth;
             let boundaryDay = isCurrentMonth ? state.todayDay : daysInMonth;
 
@@ -1100,13 +1192,11 @@
                 }
             }
 
-            // Build Prediction Dataset if looking at current month
             const predictionPoints = Array(daysInMonth).fill(null);
             if (isCurrentMonth) {
                 const currentTotalSpent = actualSpentPoints[boundaryDay - 1] || 0;
                 const averageDailySpend = boundaryDay > 0 ? (currentTotalSpent / boundaryDay) : 0;
                 
-                // Initialize forecast continuation vector beginning precisely from today's point
                 predictionPoints[boundaryDay - 1] = currentTotalSpent;
                 
                 for (let d = boundaryDay; d < daysInMonth; d++) {
@@ -1118,11 +1208,9 @@
                 document.getElementById('burn-rate-desc').textContent = "Showing final completed monthly expense trajectory";
             }
 
-            // Render/Destroy Line Chart
             if (burnRateChartInstance) burnRateChartInstance.destroy();
             const ctxBurn = document.getElementById('chart-burn-rate').getContext('2d');
             
-            // Get total budget context
             const totalBudgetLimit = (ledgerChain[state.viewedMonth]?.totalBudget) || state.globalBaseBudget;
             const budgetLinePoints = Array(daysInMonth).fill(totalBudgetLimit);
 
@@ -1142,7 +1230,7 @@
                             spanGaps: true
                         },
                         {
-                            label: 'Projected Burn Rate',
+                            label: 'Projected Spend rate',
                             data: predictionPoints,
                             borderColor: '#14b8a6',
                             borderWidth: 2.5,
@@ -1152,7 +1240,7 @@
                             spanGaps: true
                         },
                         {
-                            label: 'Budget Limit Threshold',
+                            label: 'Total Budget Threshold',
                             data: budgetLinePoints,
                             borderColor: '#ef4444',
                             borderWidth: 2,
@@ -1181,8 +1269,7 @@
                 }
             });
 
-            // 6-MONTH COMPARISON STACKED CHART
-            // Generate last 6 months leading up to currently viewed month
+            // 6-MONTH CHART
             const monthHistLabels = [];
             const spentUnderLimitData = [];
             const savedData = [];
@@ -1218,7 +1305,6 @@
                 iterDate.setMonth(iterDate.getMonth() + 1);
             }
 
-            // Render Stacked Bar Chart
             if (historyChartInstance) historyChartInstance.destroy();
             const ctxHist = document.getElementById('chart-6month-history').getContext('2d');
 
@@ -1228,19 +1314,19 @@
                     labels: monthHistLabels,
                     datasets: [
                         {
-                            label: 'Spent Within Budget',
+                            label: 'Within Budget Limit',
                             data: spentUnderLimitData,
-                            backgroundColor: '#3b82f6', // Premium Blue
+                            backgroundColor: '#3b82f6',
                         },
                         {
                             label: 'Overspent Excess',
                             data: overspentData,
-                            backgroundColor: '#f43f5e', // Vibrant Red
+                            backgroundColor: '#f43f5e',
                         },
                         {
-                            label: 'Savings Reserve Leftover',
+                            label: 'Saved Balance',
                             data: savedData,
-                            backgroundColor: '#10b981', // Vibrant Green
+                            backgroundColor: '#10b981',
                         }
                     ]
                 },
@@ -1265,35 +1351,32 @@
                 }
             });
 
-            // COMPUTE DETAILED PERFORMANCE HIGHLIGHT CARDS
+            // Metrics
             const daysActive = new Set(filteredTxs.map(t => t.date.substring(0, 10)));
             const activeDaysCount = Math.max(daysActive.size, 1);
             const totalSpentThisMonth = filteredTxs.reduce((sum, t) => sum + t.amount, 0);
             const dailyAvg = Math.round(totalSpentThisMonth / activeDaysCount);
 
             document.getElementById('metric-daily-avg').textContent = formatIQD(dailyAvg);
-            document.getElementById('metric-daily-count').textContent = `Spanning across ${activeDaysCount} active days`;
+            document.getElementById('metric-daily-count').textContent = `Over ${activeDaysCount} active days`;
 
-            // Max Single Expense Item
             if (filteredTxs.length > 0) {
                 const maxExpense = Math.max(...filteredTxs.map(t => t.amount));
                 document.getElementById('metric-highest').textContent = formatIQD(maxExpense);
                 
                 const topTx = filteredTxs.find(t => t.amount === maxExpense);
-                document.getElementById('metric-highest-desc').textContent = `Logged for "${topTx.description}"`;
+                document.getElementById('metric-highest-desc').textContent = `"${topTx.description}"`;
             } else {
                 document.getElementById('metric-highest').textContent = "0 IQD";
-                document.getElementById('metric-highest-desc').textContent = "No expenses listed yet";
+                document.getElementById('metric-highest-desc').textContent = "No expenses recorded";
             }
 
-            // Rollover Impact Velocity
             const currentViewData = ledgerChain[state.viewedMonth] || { remaining: 0 };
             document.getElementById('metric-velocity').textContent = formatIQD(currentViewData.remaining);
         }
 
-        // RENDER: SETTINGS TAB
+        // SETTINGS SYNC PANELS
         function renderSettingsTab() {
-            // Label updates
             const [y, m] = state.viewedMonth.split('-');
             const dateObj = new Date(y, parseInt(m) - 1, 1);
             const formattedMonth = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -1301,39 +1384,32 @@
             document.getElementById('lbl-override-focus').textContent = formattedMonth;
             document.getElementById('lbl-infusion-month').textContent = formattedMonth;
 
-            // Load values to fields
             document.getElementById('input-base-budget').value = state.globalBaseBudget;
             
-            // Check override
             const overrideVal = state.monthBudgets[state.viewedMonth];
             document.getElementById('input-month-override').value = overrideVal !== undefined ? overrideVal : "";
             document.getElementById('input-month-override').placeholder = `Inherited default (${formatIQD(state.globalBaseBudget)})`;
 
-            // Load Extra Funds
             document.getElementById('input-extra-funds').value = state.extraFunds[state.viewedMonth] || "";
-            document.getElementById('sidebar-base-budget-lbl').textContent = formatIQD(state.globalBaseBudget);
         }
 
-        // CONTROL APPLIERS: BUDGET SETTINGS
-        function updateGlobalBaseBudget() {
+        // TRIGGER CONTROL WRITES TO CLOUD
+        async function updateGlobalBaseBudget() {
             const inputVal = parseFloat(document.getElementById('input-base-budget').value);
             if (isNaN(inputVal) || inputVal < 0) {
                 showToast("Please supply a valid base budget.");
                 return;
             }
             state.globalBaseBudget = inputVal;
-            saveStateToStorage();
-            recalculateLedgerChain();
-            updateUI();
-            showToast("Global base budget updated!");
+            await syncConfigToCloud();
+            showToast("Global budget updated and Synced!");
         }
 
-        function updateMonthOverride() {
+        async function updateMonthOverride() {
             const inputVal = document.getElementById('input-month-override').value;
             if (inputVal.trim() === "") {
-                // Delete override parameter to re-inherit default template
                 delete state.monthBudgets[state.viewedMonth];
-                showToast("Reverted to global default limits.");
+                showToast("Reverted to default budget template.");
             } else {
                 const parsedVal = parseFloat(inputVal);
                 if (isNaN(parsedVal) || parsedVal < 0) {
@@ -1341,40 +1417,33 @@
                     return;
                 }
                 state.monthBudgets[state.viewedMonth] = parsedVal;
-                showToast("Custom override assigned successfully.");
+                showToast("Month override synced!");
             }
-            saveStateToStorage();
-            recalculateLedgerChain();
-            updateUI();
+            await syncConfigToCloud();
         }
 
-        function updateExtraFunds() {
+        async function updateExtraFunds() {
             const inputVal = document.getElementById('input-extra-funds').value;
             if (inputVal.trim() === "" || parseFloat(inputVal) === 0) {
                 delete state.extraFunds[state.viewedMonth];
-                showToast("Cleared special month infusions.");
+                showToast("Cleared extra cash infusion.");
             } else {
                 const parsedVal = parseFloat(inputVal);
                 if (isNaN(parsedVal) || parsedVal < 0) {
-                    showToast("Please specify a valid monetary value.");
+                    showToast("Please specify a valid value.");
                     return;
                 }
                 state.extraFunds[state.viewedMonth] = parsedVal;
-                showToast("Cash infusion registered.");
+                showToast("Extra infusion Synced!");
             }
-            saveStateToStorage();
-            recalculateLedgerChain();
-            updateUI();
+            await syncConfigToCloud();
         }
 
-        // EXPENSE TRANSACTIONS LOGISTICS
-
-        // Open Log form Modal
+        // TRANSACTION ACTIONS
         function openTransactionModal() {
             const modal = document.getElementById('modal-transaction');
             const box = document.getElementById('modal-tx-box');
             
-            // Set fields to defaults
             document.getElementById('tx-amount').value = "";
             document.getElementById('tx-desc').value = "food";
             document.getElementById('tx-date').value = getLocalDateTimeString();
@@ -1386,7 +1455,6 @@
             box.classList.add('scale-100');
         }
 
-        // Close Log form Modal
         function closeTransactionModal() {
             const modal = document.getElementById('modal-transaction');
             const box = document.getElementById('modal-tx-box');
@@ -1395,12 +1463,10 @@
             box.classList.add('scale-95');
         }
 
-        // Set value when quick tags are tapped
         function setTxDescChip(category) {
             document.getElementById('tx-desc').value = category;
         }
 
-        // Verify if selected date falls outside currently viewed month
         function checkTxDateWarning() {
             const dateVal = document.getElementById('tx-date').value;
             const warningLbl = document.getElementById('tx-date-warning-msg');
@@ -1412,38 +1478,35 @@
                 const [y, m] = pickedMonthStr.split('-');
                 const dObj = new Date(y, parseInt(m) - 1, 1);
                 const readableName = dObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                warningLbl.textContent = `Warning: Will be logged directly into ${readableName}, not currently viewed month.`;
+                warningLbl.textContent = `Warning: This expense will be stored in ${readableName}.`;
             } else {
                 warningLbl.textContent = "";
             }
         }
 
-        // Save transaction form data safely
-        function saveTransactionForm() {
+        async function saveTransactionForm() {
             const amount = parseFloat(document.getElementById('tx-amount').value);
             const description = document.getElementById('tx-desc').value.trim();
             const dateVal = document.getElementById('tx-date').value;
             const errorBox = document.getElementById('tx-form-error');
             const errorLbl = document.getElementById('tx-error-msg');
 
-            // Form Validations without utilizing disruptive Native Alerts
             if (isNaN(amount) || amount <= 0) {
-                errorLbl.textContent = "Please provide an expense amount greater than 0 IQD.";
+                errorLbl.textContent = "Please provide an amount greater than 0 IQD.";
                 errorBox.classList.remove('hidden');
                 return;
             }
             if (!description) {
-                errorLbl.textContent = "Description text cannot be empty.";
+                errorLbl.textContent = "Description is required.";
                 errorBox.classList.remove('hidden');
                 return;
             }
             if (!dateVal) {
-                errorLbl.textContent = "Please select a valid transaction timestamp.";
+                errorLbl.textContent = "Please pick a valid timestamp.";
                 errorBox.classList.remove('hidden');
                 return;
             }
 
-            // Create new record
             const newTx = {
                 id: crypto.randomUUID(),
                 amount,
@@ -1451,11 +1514,8 @@
                 date: dateVal
             };
 
-            state.transactions.push(newTx);
-            saveStateToStorage();
-            recalculateLedgerChain();
+            await syncTransactionToCloud(newTx);
             
-            // Check if user saved transaction in historical month and auto-adjust focus
             const txMonthStr = dateVal.substring(0, 7);
             if (txMonthStr !== state.viewedMonth) {
                 state.viewedMonth = txMonthStr;
@@ -1463,10 +1523,9 @@
 
             closeTransactionModal();
             updateUI();
-            showToast("New transaction successfully written.");
+            showToast("New transaction logged and Synced!");
         }
 
-        // Trigger Delete Popup Warn Box
         function triggerDeleteExpense(id) {
             activeDeleteId = id;
             
@@ -1477,7 +1536,6 @@
             box.classList.remove('scale-95');
             box.classList.add('scale-100');
 
-            // Wire confirm key dynamically
             document.getElementById('btn-confirm-delete').onclick = confirmDeleteExpense;
         }
 
@@ -1490,19 +1548,16 @@
             activeDeleteId = null;
         }
 
-        function confirmDeleteExpense() {
+        async function confirmDeleteExpense() {
             if (!activeDeleteId) return;
 
-            state.transactions = state.transactions.filter(t => t.id !== activeDeleteId);
-            saveStateToStorage();
-            recalculateLedgerChain();
+            await deleteTransactionFromCloud(activeDeleteId);
             
             closeDeleteModal();
             updateUI();
-            showToast("Transaction purged.");
+            showToast("Transaction deleted from Cloud!");
         }
 
-        // Trigger Wipe Modal
         function triggerWipeModal() {
             const modal = document.getElementById('modal-wipe');
             const box = document.getElementById('modal-wipe-box');
@@ -1522,90 +1577,76 @@
             box.classList.add('scale-95');
         }
 
-        function confirmWipeData() {
+        async function confirmWipeData() {
             const val = document.getElementById('input-wipe-verify').value.trim().toUpperCase();
             if (val !== "WIPE") {
                 document.getElementById('wipe-error-lbl').classList.remove('hidden');
                 return;
             }
 
-            // Purge Everything
-            localStorage.removeItem('iqd_budget_tracker_state');
+            // Wipe remote configs
             state.globalBaseBudget = DEFAULT_GLOBAL_BASE;
             state.monthBudgets = {};
             state.extraFunds = {};
-            state.transactions = [];
-            
-            initRealWorldTime();
-            recalculateLedgerChain();
+            await syncConfigToCloud();
+
+            // Clear remote transactions
+            for (let tx of state.transactions) {
+                await deleteTransactionFromCloud(tx.id);
+            }
+
             closeWipeModal();
             updateUI();
-            showToast("Database destroyed. Default settings initialized.");
+            showToast("Cloud Database wiped completely!");
         }
 
-        // DATA IMPORT & EXPORT LOGIC
-
-        // Download JSON Backup
+        // OFFLINE BACKUPS AND JSON RESTORES
         function exportDataJSON() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
             const dlAnchorElem = document.createElement('a');
             dlAnchorElem.setAttribute("href", dataStr);
-            dlAnchorElem.setAttribute("download", `iqd_ledger_export_${state.currentRealMonth}.json`);
+            dlAnchorElem.setAttribute("download", `iqd_cloud_backup_${state.currentRealMonth}.json`);
             dlAnchorElem.click();
-            showToast("Export download started!");
+            showToast("Backup downloaded!");
         }
 
-        // Quick Backup Copy to clipboard
-        function copyDataToClipboard() {
-            const textToCopy = JSON.stringify(state, null, 2);
-            
-            // Safe execution command fallback for Sandboxed environments
-            const tempTextArea = document.createElement("textarea");
-            tempTextArea.value = textToCopy;
-            document.body.appendChild(tempTextArea);
-            tempTextArea.select();
-            
-            try {
-                document.execCommand('copy');
-                showToast("Database JSON copied to clipboard!");
-            } catch (err) {
-                showToast("Failed to copy automatically.");
-            }
-            
-            document.body.removeChild(tempTextArea);
-        }
-
-        // Restore / File Upload parsing
-        function importDataJSON(event) {
+        async function importDataJSON(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     const parsed = JSON.parse(e.target.result);
                     
                     if (typeof parsed.globalBaseBudget === 'number') {
+                        // Clear existing
+                        for (let tx of state.transactions) {
+                            await deleteTransactionFromCloud(tx.id);
+                        }
+
                         state.globalBaseBudget = parsed.globalBaseBudget;
                         state.monthBudgets = parsed.monthBudgets || {};
                         state.extraFunds = parsed.extraFunds || {};
-                        state.transactions = parsed.transactions || [];
-                        
-                        saveStateToStorage();
-                        recalculateLedgerChain();
-                        updateUI();
-                        showToast("Ledger Database restored successfully!");
+                        await syncConfigToCloud();
+
+                        const newTxs = parsed.transactions || [];
+                        for (let tx of newTxs) {
+                            await syncTransactionToCloud(tx);
+                        }
+
+                        showToast("Imported data and fully synced to cloud!");
                     } else {
-                        showToast("Invalid JSON schema pattern.");
+                        showToast("Invalid JSON Backup format.");
                     }
                 } catch (err) {
-                    showToast("Failed to read file. Parsing error.");
+                    showToast("Failed reading import database.");
                 }
             };
             reader.readAsText(file);
         }
 
-        // TOAST ENGINE
+        // TOOL UTILITIES
         let toastTimeout = null;
         function showToast(message) {
             const toast = document.getElementById('toast-message');
@@ -1621,39 +1662,28 @@
             }, 3000);
         }
 
-        // STORAGE ACTIONS
-        function saveStateToStorage() {
-            localStorage.setItem('iqd_budget_tracker_state', JSON.stringify({
-                globalBaseBudget: state.globalBaseBudget,
-                monthBudgets: state.monthBudgets,
-                extraFunds: state.extraFunds,
-                transactions: state.transactions
-            }));
-        }
-
-        function loadStateFromStorage() {
-            const raw = localStorage.getItem('iqd_budget_tracker_state');
-            if (raw) {
-                try {
-                    const data = JSON.parse(raw);
-                    state.globalBaseBudget = data.globalBaseBudget || DEFAULT_GLOBAL_BASE;
-                    state.monthBudgets = data.monthBudgets || {};
-                    state.extraFunds = data.extraFunds || {};
-                    state.transactions = data.transactions || [];
-                } catch (e) {
-                    console.error("Local Storage reading failed.", e);
-                }
+        function copyUIDToClipboard() {
+            if (!auth.currentUser) return;
+            const uid = auth.currentUser.uid;
+            
+            const temp = document.createElement("textarea");
+            temp.value = uid;
+            document.body.appendChild(temp);
+            temp.select();
+            
+            try {
+                document.execCommand('copy');
+                showToast("User Sync Code copied to clipboard!");
+            } catch (err) {
+                showToast("Failed to copy code.");
             }
+            document.body.removeChild(temp);
         }
 
-        // FORMATTING UTILITIES
-
-        // Currency parser
         function formatIQD(num) {
             return new Intl.NumberFormat('en-US').format(num) + ' IQD';
         }
 
-        // Get local timezone ISO representation (safe from shifting backward)
         function getLocalDateTimeString() {
             const now = new Date();
             const y = now.getFullYear();
@@ -1664,7 +1694,6 @@
             return `${y}-${m}-${d}T${h}:${min}`;
         }
 
-        // Render human friendly date-time
         function formatDateTimeString(dateTimeStr) {
             const parts = dateTimeStr.split('T');
             const datePart = parts[0];
@@ -1682,7 +1711,6 @@
             });
         }
 
-        // Safe HTML text parser
         function escapeHTML(str) {
             return str.replace(/[&<>'"]/g, 
                 tag => ({
@@ -1694,6 +1722,28 @@
                 }[tag] || tag)
             );
         }
+
+        // EXPOSE ACTIONS TO THE MODULE WINDOW LEVEL
+        window.switchTab = switchTab;
+        window.changeMonth = changeMonth;
+        window.jumpToToday = jumpToToday;
+        window.updateProjectionUI = updateProjectionUI;
+        window.updateGlobalBaseBudget = updateGlobalBaseBudget;
+        window.updateMonthOverride = updateMonthOverride;
+        window.updateExtraFunds = updateExtraFunds;
+        window.exportDataJSON = exportDataJSON;
+        window.importDataJSON = importDataJSON;
+        window.openTransactionModal = openTransactionModal;
+        window.closeTransactionModal = closeTransactionModal;
+        window.setTxDescChip = setTxDescChip;
+        window.triggerDeleteExpense = triggerDeleteExpense;
+        window.closeDeleteModal = closeDeleteModal;
+        window.triggerWipeModal = triggerWipeModal;
+        window.closeWipeModal = closeWipeModal;
+        window.confirmWipeData = confirmWipeData;
+        window.copyUIDToClipboard = copyUIDToClipboard;
     </script>
 </body>
 </html>
+
+
