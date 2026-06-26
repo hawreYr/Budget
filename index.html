@@ -1,1741 +1,993 @@
 
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IQD Cumulative Ledger & Budget Tracker</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Lucide Icons CDN -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Firebase Compat CDN (Simplifies single-file embeds) -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
-          },
-          colors: {
-            brand: {
-              50: '#f0fdf4',
-              100: '#dcfce7',
-              500: '#22c55e',
-              600: '#16a34a',
-              700: '#15803d',
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Tracker Pro</title>
     
-    /* Custom premium scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: rgba(15, 23, 42, 0.6);
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(51, 65, 85, 0.8);
-      border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(71, 85, 105, 1);
-    }
-  </style>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { primary: '#4f46e5', secondary: '#10b981', danger: '#ef4444' },
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        dialog::backdrop {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Disable number input arrows */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
 </head>
-<body class="h-full flex flex-col md:flex-row overflow-hidden select-none">
+<body class="bg-gray-100 text-slate-800 flex flex-col md:flex-row h-screen overflow-hidden selection:bg-primary selection:text-white">
 
-  <!-- ================= SIDEBAR (Desktop/iPad) ================= -->
-  <aside class="hidden md:flex flex-col w-64 bg-slate-900 border-r border-slate-800 shrink-0">
-    <div class="p-6 flex items-center gap-3 border-b border-slate-800">
-      <div class="bg-emerald-500/10 p-2 rounded-xl text-emerald-400">
-        <i data-lucide="wallet" class="w-6 h-6"></i>
-      </div>
-      <div>
-        <h1 class="font-bold text-lg leading-tight text-white">IQD Ledger</h1>
-        <p class="text-xs text-slate-400">Cumulative Tracker</p>
-      </div>
+    <!-- Mobile Top Bar -->
+    <div class="md:hidden flex items-center justify-between bg-white px-4 py-3 shadow-sm z-20">
+        <div class="flex items-center gap-2">
+            <i data-lucide="wallet" class="text-primary w-6 h-6"></i>
+            <h1 class="font-bold text-lg text-slate-800">Budget Pro</h1>
+        </div>
     </div>
 
-    <!-- Navigation Menu -->
-    <nav class="flex-1 p-4 space-y-1">
-      <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 bg-emerald-600 text-white">
-        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-        <span>Dashboard</span>
-      </button>
-      <button onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800/60 hover:text-white">
-        <i data-lucide="line-chart" class="w-5 h-5"></i>
-        <span>Analytics</span>
-      </button>
-      <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800/60 hover:text-white">
-        <i data-lucide="settings" class="w-5 h-5"></i>
-        <span>Settings & Sync</span>
-      </button>
-    </nav>
-
-    <!-- Sidebar Footer (Cloud Sync Info) -->
-    <div class="p-4 border-t border-slate-800 bg-slate-950/40">
-      <div class="flex items-center gap-3">
-        <div id="sync-indicator-sidebar" class="w-2.5 h-2.5 rounded-full bg-slate-500 animate-pulse"></div>
-        <div class="flex-1 min-w-0">
-          <p class="text-xs font-semibold text-slate-300 truncate" id="sidebar-sync-id">Syncing...</p>
-          <p class="text-[10px] text-slate-500" id="sync-status-sidebar">Connecting to cloud</p>
+    <!-- Desktop Sidebar -->
+    <aside class="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 z-20 h-full">
+        <div class="p-6 flex items-center gap-3">
+            <div class="p-2 bg-indigo-50 rounded-lg"><i data-lucide="wallet" class="text-primary w-6 h-6"></i></div>
+            <h1 class="font-bold text-xl text-slate-800">Budget Pro</h1>
         </div>
-        <button onclick="copySyncID()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800" title="Copy Sync ID">
-          <i data-lucide="copy" class="w-4 h-4"></i>
-        </button>
-      </div>
-    </div>
-  </aside>
-
-  <!-- ================= MAIN CONTENT CONTAINER ================= -->
-  <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-950">
-
-    <!-- TOP HEADER -->
-    <header class="bg-slate-900/40 border-b border-slate-900 px-4 md:px-8 py-4 flex items-center justify-between z-10">
-      <div class="flex items-center gap-4">
-        <!-- Month Selector Controls -->
-        <div class="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-inner shadow-black/40">
-          <button onclick="navigateMonth(-1)" class="p-2 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg transition-colors">
-            <i data-lucide="chevron-left" class="w-5 h-5"></i>
-          </button>
-          <span id="view-month-label" class="px-4 font-semibold text-sm md:text-base text-white min-w-[120px] text-center">June 2026</span>
-          <button onclick="navigateMonth(1)" class="p-2 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg transition-colors">
-            <i data-lucide="chevron-right" class="w-5 h-5"></i>
-          </button>
-        </div>
-        
-        <!-- Live Badge -->
-        <span id="real-time-badge" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-          Viewing Current Month
-        </span>
-      </div>
-
-      <div class="flex items-center gap-3">
-        <button onclick="openAddSpendingModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-all duration-200 shadow-lg shadow-emerald-950/40 hover:shadow-emerald-500/10 flex items-center gap-2">
-          <i data-lucide="plus" class="w-4.5 h-4.5"></i>
-          <span class="hidden sm:inline">Add Spending</span>
-        </button>
-      </div>
-    </header>
-
-    <!-- CONTENT VIEW SCROLLER -->
-    <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
-
-      <!-- ================= TAB: DASHBOARD ================= -->
-      <section id="tab-dashboard-view" class="space-y-6">
-        
-        <!-- LEDGER OVERVIEW CARDS -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-          
-          <!-- Card: Remaining Balance -->
-          <div class="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-xl shadow-black/10">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none"></div>
-            <div class="flex items-center justify-between mb-4">
-              <span class="text-sm font-medium text-slate-400">Remaining Balance</span>
-              <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
-                <i data-lucide="piggy-bank" class="w-5 h-5"></i>
-              </div>
-            </div>
-            <h3 id="stat-remaining-balance" class="text-3xl font-extrabold text-white tracking-tight">0 IQD</h3>
-            <div class="mt-4 flex flex-col gap-1.5">
-              <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                <div id="stat-balance-bar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
-              </div>
-              <div class="flex justify-between text-xs text-slate-400">
-                <span id="stat-spent-percent">0% Spent</span>
-                <span id="stat-left-percent">100% Left</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Card: Total Budget (Calculated) -->
-          <div class="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-xl shadow-black/10 group">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-sky-500/5 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none"></div>
-            <div class="flex items-center justify-between mb-4">
-              <span class="text-sm font-medium text-slate-400 flex items-center gap-1.5">
-                Total Budget
-                <div class="relative inline-block cursor-help group/tooltip">
-                  <i data-lucide="help-circle" class="w-4 h-4 text-slate-500 hover:text-slate-300"></i>
-                  <!-- Tooltip Breakdown Box -->
-                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 shadow-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 pointer-events-none">
-                    <p class="font-bold mb-1.5 text-white">Monthly Breakdown</p>
-                    <div class="space-y-1 text-slate-400">
-                      <div class="flex justify-between">
-                        <span>Base Budget:</span>
-                        <span id="tooltip-base" class="text-white">160,000 IQD</span>
-                      </div>
-                      <div class="flex justify-between">
-                        <span>Extra Funds:</span>
-                        <span id="tooltip-extra" class="text-emerald-400">+0 IQD</span>
-                      </div>
-                      <div class="flex justify-between border-t border-slate-800 pt-1">
-                        <span>Rollover:</span>
-                        <span id="tooltip-rollover" class="text-blue-400">+0 IQD</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </span>
-              <div class="p-2 bg-sky-500/10 text-sky-400 rounded-xl">
-                <i data-lucide="calculator" class="w-5 h-5"></i>
-              </div>
-            </div>
-            <h3 id="stat-total-budget" class="text-3xl font-extrabold text-white tracking-tight">0 IQD</h3>
-            <div class="mt-4 text-xs text-slate-500 flex flex-wrap gap-x-2 gap-y-1">
-              <span>Base + Extra + Rollover from past months.</span>
-            </div>
-          </div>
-
-          <!-- Card: Total Spent -->
-          <div class="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-xl shadow-black/10">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none"></div>
-            <div class="flex items-center justify-between mb-4">
-              <span class="text-sm font-medium text-slate-400">Total Spent</span>
-              <div class="p-2 bg-rose-500/10 text-rose-400 rounded-xl">
-                <i data-lucide="credit-card" class="w-5 h-5"></i>
-              </div>
-            </div>
-            <h3 id="stat-total-spent" class="text-3xl font-extrabold text-white tracking-tight">0 IQD</h3>
-            <div class="mt-4 text-xs text-slate-500" id="stat-transaction-count">
-              No transactions recorded this month
-            </div>
-          </div>
-
-        </div>
-
-        <!-- RECONCILED/ROLLOVER LIVE LEDGER DEEP DIVE PANEL -->
-        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-lg">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3.5">LEDGER ROLLOVER CALCULATION FLOW</h4>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div class="bg-slate-950/40 p-3 rounded-xl border border-slate-800/50">
-              <p class="text-xs text-slate-500">Global Base Budget</p>
-              <p class="text-base font-bold text-slate-200 mt-1" id="ledger-global-base">0 IQD</p>
-            </div>
-            <div class="bg-slate-950/40 p-3 rounded-xl border border-slate-800/50">
-              <p class="text-xs text-slate-500">Specific Month Budget</p>
-              <p class="text-base font-bold text-slate-200 mt-1" id="ledger-month-budget">0 IQD</p>
-            </div>
-            <div class="bg-slate-950/40 p-3 rounded-xl border border-slate-800/50">
-              <p class="text-xs text-slate-500">Extra Added Funds</p>
-              <p class="text-base font-bold text-emerald-400 mt-1" id="ledger-extra-funds">+0 IQD</p>
-            </div>
-            <div class="bg-slate-950/40 p-3 rounded-xl border border-slate-800/50">
-              <p class="text-xs text-slate-500">Cumulative Rollover In</p>
-              <p class="text-base font-bold text-blue-400 mt-1" id="ledger-rollover">0 IQD</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- DYNAMIC DAILY PROJECTION CARD (Only visible for current month) -->
-        <div id="dynamic-projection-container" class="hidden">
-          <div class="bg-gradient-to-r from-emerald-950/40 to-slate-900 border border-emerald-500/20 rounded-2xl p-6 relative overflow-hidden shadow-xl">
-            <div class="absolute top-1/2 -translate-y-1/2 right-4 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-              <div class="space-y-2 max-w-xl">
-                <div class="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-lg text-xs font-semibold">
-                  <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                  Real-time Smart Projections
-                </div>
-                <h3 class="text-xl font-bold text-white">Daily Spending Limit Calculator</h3>
-                <p class="text-sm text-slate-400" id="projection-explanation">
-                  There are X days left in this month. Keep your daily spending below the safe limit to stay inside your target budget.
-                </p>
-              </div>
-
-              <!-- Calculator Interface -->
-              <div class="flex items-center gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800 shrink-0 w-full lg:w-auto">
-                <div class="space-y-1">
-                  <label class="block text-[10px] text-slate-400 uppercase font-semibold">Projection Window (Days)</label>
-                  <input type="number" id="projection-days-input" min="1" max="90" value="7" oninput="recalculateDailyProjection()" class="w-24 bg-slate-900 text-white border border-slate-700 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none focus:border-emerald-500">
-                </div>
-                <div class="h-10 w-[1px] bg-slate-800"></div>
-                <div>
-                  <p class="text-[10px] text-slate-400 uppercase font-semibold">Safe Daily Limit</p>
-                  <p id="projection-limit-value" class="text-lg md:text-xl font-extrabold text-emerald-400">0 IQD / day</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- TRANSACTIONS CONTAINER -->
-        <div class="bg-slate-900/30 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
-          <div class="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <h3 class="text-lg font-bold text-white">Month Transactions</h3>
-              <p class="text-xs text-slate-400" id="transaction-count-label">Showing 0 transactions</p>
-            </div>
-            
-            <!-- Quick Filter / Search -->
-            <div class="relative w-full sm:w-64">
-              <i data-lucide="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4"></i>
-              <input type="text" id="transaction-search" placeholder="Filter by description..." oninput="renderTransactions()" class="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 rounded-xl text-sm focus:outline-none focus:border-emerald-500 transition-colors">
-            </div>
-          </div>
-
-          <!-- Transactions List -->
-          <div id="transactions-list" class="space-y-3 max-h-[450px] overflow-y-auto pr-2">
-            <!-- Rendered Dynamically -->
-          </div>
-        </div>
-
-      </section>
-
-      <!-- ================= TAB: ANALYTICS ================= -->
-      <section id="tab-analytics-view" class="hidden space-y-6">
-        
-        <!-- CHARTS GRID -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
-          <!-- Burn Rate line chart -->
-          <div class="bg-slate-900/30 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col h-[400px]">
-            <div class="mb-4">
-              <h3 class="text-base font-bold text-white">Monthly Burn Rate</h3>
-              <p class="text-xs text-slate-400">Day-by-day actual cumulative spending compared to your target projection</p>
-            </div>
-            <div class="flex-1 min-h-0 relative">
-              <canvas id="burnRateChart"></canvas>
-            </div>
-          </div>
-
-          <!-- Stacked 6-Month History -->
-          <div class="bg-slate-900/30 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col h-[400px]">
-            <div class="mb-4">
-              <h3 class="text-base font-bold text-white">6-Month Ledger History</h3>
-              <p class="text-xs text-slate-400">Stacked breakdowns representing spending, savings, or overspending limits</p>
-            </div>
-            <div class="flex-1 min-h-0 relative">
-              <canvas id="historyChart"></canvas>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- MONTHLY HIGHLIGHTS & SUMMARY INSIGHTS -->
-        <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl">
-          <h4 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
-            <i data-lucide="sparkle" class="text-emerald-400 w-4 h-4"></i>
-            Ledger Smart Analytics & Insights
-          </h4>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="space-y-1">
-              <span class="text-xs text-slate-400">Most Expensive Expense Category</span>
-              <p id="insight-top-description" class="text-lg font-bold text-white">-</p>
-            </div>
-            <div class="space-y-1 border-t md:border-t-0 md:border-l border-slate-800 pt-4 md:pt-0 md:pl-6">
-              <span class="text-xs text-slate-400">Average Spending Per Day</span>
-              <p id="insight-avg-daily" class="text-lg font-bold text-white">-</p>
-            </div>
-            <div class="space-y-1 border-t md:border-t-0 md:border-l border-slate-800 pt-4 md:pt-0 md:pl-6">
-              <span class="text-xs text-slate-400">Status Ending Projected Forecast</span>
-              <p id="insight-projected-end" class="text-lg font-bold text-white">-</p>
-            </div>
-          </div>
-        </div>
-
-      </section>
-
-      <!-- ================= TAB: SETTINGS & SYNC ================= -->
-      <section id="tab-settings-view" class="hidden space-y-6">
-        
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
-          <!-- Column 1: Budget Settings -->
-          <div class="bg-slate-900/30 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
-            <div class="border-b border-slate-800 pb-4">
-              <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                <i data-lucide="sliders" class="text-slate-400 w-5 h-5"></i>
-                Ledger Configurations
-              </h3>
-              <p class="text-xs text-slate-400">Manage base monthly allocations, specific month budget rules, and extra cash inputs</p>
-            </div>
-
-            <!-- Global Base Budget Form -->
-            <div class="space-y-2">
-              <label class="block text-sm font-semibold text-slate-300">Global Base Budget Template (IQD)</label>
-              <div class="flex gap-3">
-                <input type="number" id="setting-global-base" placeholder="e.g. 160000" class="flex-1 bg-slate-900 border border-slate-800 text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
-                <button onclick="updateGlobalBaseBudget()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all duration-200">
-                  Update Template
-                </button>
-              </div>
-              <p class="text-[11px] text-slate-500">Default base template used for creating new months in your continuous ledger.</p>
-            </div>
-
-            <hr class="border-slate-800">
-
-            <!-- Month Budget Override & Extra Funds -->
-            <div class="space-y-4">
-              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400" id="override-month-title">Adjust Specific Month</h4>
-              
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="space-y-1.5">
-                  <label class="block text-xs font-semibold text-slate-300">Override Month Base (IQD)</label>
-                  <input type="number" id="setting-month-override" placeholder="e.g. 180000" class="w-full bg-slate-900 border border-slate-800 text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
-                </div>
-                <div class="space-y-1.5">
-                  <label class="block text-xs font-semibold text-slate-300">Add One-off Extra Funds (IQD)</label>
-                  <input type="number" id="setting-month-extra" placeholder="e.g. 20000" class="w-full bg-slate-900 border border-slate-800 text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
-                </div>
-              </div>
-
-              <div class="flex gap-3">
-                <button onclick="updateMonthBudgetSettings()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-sm transition-all duration-200 shadow-md shadow-emerald-950/20">
-                  Save Changes for Selected Month
-                </button>
-                <button onclick="resetMonthBudgetSettings()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white font-medium px-4 py-2.5 rounded-xl text-xs transition-all duration-200" title="Reset this Month's budget settings to default global template">
-                  Reset Month Customization
-                </button>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- Column 2: Devices Sync & Database Controls -->
-          <div class="bg-slate-900/30 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
-            <div class="border-b border-slate-800 pb-4">
-              <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                <i data-lucide="cloud" class="text-slate-400 w-5 h-5"></i>
-                Live Devices Cloud Sync
-              </h3>
-              <p class="text-xs text-slate-400">Share or synchronize your ledger live with other phones, iPads, or desktop computers</p>
-            </div>
-
-            <!-- Active Sync ID display -->
-            <div class="bg-slate-950/60 border border-slate-800 p-4 rounded-xl space-y-2">
-              <p class="text-xs text-slate-400 font-semibold">Your Live Cloud Sync ID</p>
-              <div class="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg p-2">
-                <span id="sync-id-display" class="font-mono text-xs text-slate-300 break-all select-all flex-1 px-1">Generating...</span>
-                <button onclick="copySyncID()" class="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 p-2 rounded-md transition-all shrink-0" title="Copy Sync ID">
-                  <i data-lucide="copy" class="w-4 h-4"></i>
-                </button>
-              </div>
-              <p class="text-[10px] text-slate-500 leading-normal">
-                Give this Sync ID to your partner, family, or load it onto another computer. Anyone with this ID will read/write to the same cumulative ledger in real-time.
-              </p>
-            </div>
-
-            <!-- Paste / Link new device sync ID -->
-            <div class="space-y-2">
-              <label class="block text-sm font-semibold text-slate-300">Link another Device ID</label>
-              <div class="flex gap-3">
-                <input type="text" id="sync-paste-input" placeholder="Paste your companion device's Sync ID here" class="flex-1 bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 rounded-xl px-4 py-2.5 text-xs font-mono focus:outline-none focus:border-emerald-500">
-                <button onclick="linkCompanionDevice()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all duration-200">
-                  Link Device
-                </button>
-              </div>
-              <p class="text-[11px] text-slate-500">Linking will replace this device's current view with the partner device's data.</p>
-            </div>
-
-            <!-- Self-Host Custom Firebase Setup Panel -->
-            <div class="space-y-2 mt-4 pt-4 border-t border-slate-800">
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400">GitHub / Netlify Cloud Database Config</label>
-              <textarea id="setting-custom-firebase" rows="3" placeholder='Paste your Firebase config JSON here, e.g.:&#10;{&#10;  "apiKey": "AIzaSy...",&#10;  "authDomain": "...",&#10;  "projectId": "...",&#10;  "storageBucket": "...",&#10;  "messagingSenderId": "...",&#10;  "appId": "..."&#10;}' class="w-full bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-600 rounded-xl px-4 py-2.5 text-[10px] font-mono focus:outline-none focus:border-emerald-500"></textarea>
-              <div class="flex gap-2">
-                <button onclick="saveCustomFirebaseConfig()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-3 py-2 rounded-xl text-xs transition-all duration-200">
-                  Apply & Connect Online
-                </button>
-                <button onclick="clearCustomFirebaseConfig()" class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white font-semibold px-3 py-2 rounded-xl text-xs transition-all duration-200">
-                  Disconnect / Reset Config
-                </button>
-              </div>
-              <p class="text-[10px] text-slate-500 leading-normal">
-                Supply your own free Firebase Config JSON here so this ledger gets a real <strong>Online Sync ID</strong> and real-time database capabilities outside the platform.
-              </p>
-            </div>
-
-            <hr class="border-slate-800">
-
-            <!-- Backup & Danger Zone -->
-            <div class="space-y-3">
-              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Offline Backups & Maintenance</h4>
-              
-              <div class="flex flex-wrap gap-3">
-                <button onclick="exportDataJSON()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 font-medium px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-colors">
-                  <i data-lucide="download" class="w-3.5 h-3.5"></i> Export Backup
-                </button>
-                <button onclick="triggerJSONImport()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 font-medium px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-colors">
-                  <i data-lucide="upload" class="w-3.5 h-3.5"></i> Import Backup
-                </button>
-                <input type="file" id="import-file-picker" accept=".json" class="hidden" onchange="importDataJSON(event)">
-                
-                <button onclick="openWipeModal()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 font-medium px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 ml-auto transition-colors">
-                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Wipe Data
-                </button>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
-    </div>
-
-    <!-- ================= MOBILE NAVIGATION (Bottom Bar) ================= -->
-    <nav class="flex md:hidden bg-slate-900 border-t border-slate-800 p-2 justify-around items-center shrink-0 z-10">
-      <button onclick="switchTab('dashboard')" id="mobile-nav-dashboard" class="mobile-nav-btn flex flex-col items-center gap-1 py-1 px-3 text-emerald-500">
-        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-        <span class="text-[10px] font-semibold">Dashboard</span>
-      </button>
-      <button onclick="switchTab('analytics')" id="mobile-nav-analytics" class="mobile-nav-btn flex flex-col items-center gap-1 py-1 px-3 text-slate-400 hover:text-white">
-        <i data-lucide="line-chart" class="w-5 h-5"></i>
-        <span class="text-[10px] font-semibold">Analytics</span>
-      </button>
-      <button onclick="switchTab('settings')" id="mobile-nav-settings" class="mobile-nav-btn flex flex-col items-center gap-1 py-1 px-3 text-slate-400 hover:text-white">
-        <i data-lucide="settings" class="w-5 h-5"></i>
-        <span class="text-[10px] font-semibold">Settings</span>
-      </button>
-    </nav>
-
-  </main>
-
-  <!-- ================= TOAST NOTIFICATION STACK ================= -->
-  <div id="toast-container" class="fixed bottom-20 md:bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
-    <!-- Toast boxes generated via JS -->
-  </div>
-
-  <!-- ================= CUSTOM MODAL Backdrop ================= -->
-  <div id="custom-modal-backdrop" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4 transition-all duration-300">
-    
-    <!-- Modal Content: Add Transaction -->
-    <div id="modal-add-spending" class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 relative overflow-hidden hidden">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="font-extrabold text-lg text-white">Add Spending</h3>
-        <button onclick="closeModal()" class="text-slate-400 hover:text-white hover:bg-slate-800 p-1 rounded-lg transition-colors">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-      
-      <form id="add-spending-form" onsubmit="saveTransaction(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Amount (IQD)</label>
-          <input type="number" id="form-amount" required min="1" placeholder="e.g. 15000" class="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Description</label>
-          <input type="text" id="form-description" required value="food" class="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Date & Time</label>
-          <input type="datetime-local" id="form-datetime" required class="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
-        </div>
-
-        <div class="flex gap-3 pt-2">
-          <button type="button" onclick="closeModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-sm transition-colors">
-            Cancel
-          </button>
-          <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-lg shadow-emerald-950/20">
-            Save Transaction
-          </button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Modal Content: Delete Confirmation -->
-    <div id="modal-delete-confirm" class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 relative overflow-hidden hidden text-center space-y-4">
-      <div class="w-12 h-12 bg-rose-500/15 text-rose-400 rounded-full flex items-center justify-center mx-auto mb-2">
-        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
-      </div>
-      <div class="space-y-2">
-        <h3 class="font-extrabold text-lg text-white">Delete Transaction?</h3>
-        <p class="text-xs text-slate-400 leading-relaxed">This will permanently remove this transaction from the database. This action cannot be undone.</p>
-      </div>
-      <div class="flex gap-3 pt-2">
-        <button onclick="closeModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-sm transition-colors">
-          Cancel
-        </button>
-        <button id="btn-confirm-delete" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-lg shadow-rose-950/20">
-          Delete
-        </button>
-      </div>
-    </div>
-
-    <!-- Modal Content: Wipe Database Confirmation -->
-    <div id="modal-wipe-confirm" class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 relative overflow-hidden hidden text-center space-y-4">
-      <div class="w-12 h-12 bg-rose-500/15 text-rose-400 rounded-full flex items-center justify-center mx-auto mb-2">
-        <i data-lucide="trash-2" class="w-6 h-6"></i>
-      </div>
-      <div class="space-y-2">
-        <h3 class="font-extrabold text-lg text-white text-rose-400">Wipe All Data?</h3>
-        <p class="text-xs text-slate-400 leading-relaxed">This will erase all budget entries, overrides, transactions, and continuous ledger rollover records from the cloud. This action is irreversible.</p>
-      </div>
-      <div class="flex gap-3 pt-2">
-        <button onclick="closeModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-sm transition-colors">
-          Cancel
-        </button>
-        <button onclick="executeWipeData()" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-lg shadow-rose-950/20">
-          Wipe Everything
-        </button>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ================= JAVASCRIPT LOGIC ENGINE ================= -->
-  <script>
-    // --- APP ID AND FIREBASE ENVIRONMENT INITIALIZATION ---
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'iqd-cumulative-ledger';
-    const customFirebaseConfig = localStorage.getItem('custom_firebase_config');
-    const firebaseConfigStr = (typeof __firebase_config !== 'undefined' && __firebase_config && __firebase_config !== '{}') 
-      ? __firebase_config 
-      : (customFirebaseConfig || '{}');
-
-    let db = null;
-    let auth = null;
-    let syncId = localStorage.getItem('budget_sync_id') || '';
-    let isFirebaseConnected = false;
-    let firestoreUnsubscribe = null;
-
-    // --- MAIN STATE STORE ---
-    let currentMonthKey = ''; // YYYY-MM
-    let appData = {
-      globalBaseBudget: 160000,
-      monthSettings: {}, // { 'YYYY-MM': { budgetOverride: null, addedFunds: 0 } }
-      transactions: [],  // [ { id: 'x', amount: 12000, description: 'food', date: 'YYYY-MM-DDTHH:MM' } ]
-      updatedAt: 0
-    };
-
-    // Keep track of target delete item
-    let transactionToDeleteId = null;
-
-    // Keep track of chart instances
-    let burnRateChartInstance = null;
-    let historyChartInstance = null;
-
-    // --- CDNS & LIBRARIES SAFE WRAPPER ---
-    function safeCreateIcons() {
-      if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
-        lucide.createIcons();
-      }
-    }
-
-    // Initialize Page
-    window.addEventListener('DOMContentLoaded', () => {
-      initAppDates();
-      loadLocalStateFallback();
-      initFirebaseConnection();
-      renderDashboard();
-    });
-
-    // Setup dates and current month key
-    function initAppDates() {
-      const now = new Date();
-      currentMonthKey = getMonthKeyString(now);
-    }
-
-    // Load data from local storage for offline / quick load
-    function loadLocalStateFallback() {
-      const storedData = localStorage.getItem('budget_app_data');
-      if (storedData) {
-        try {
-          appData = JSON.parse(storedData);
-        } catch (e) {
-          console.error("Local storage corruption detected. Resetting.", e);
-        }
-      }
-    }
-
-    // Initialize Firebase Connection (Follow Rule 3 - Auth Before Queries)
-    async function initFirebaseConnection() {
-      try {
-        if (typeof firebase !== 'undefined' && firebaseConfigStr && firebaseConfigStr !== '{}') {
-          const firebaseConfig = JSON.parse(firebaseConfigStr);
-          const app = firebase.initializeApp(firebaseConfig);
-          auth = firebase.auth();
-          db = firebase.firestore();
-
-          updateSyncStatus('connecting', 'Connecting to cloud');
-
-          // Check if custom auth token or anonymous login
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await auth.signInWithCustomToken(__initial_auth_token);
-          } else {
-            await auth.signInAnonymously();
-          }
-
-          auth.onAuthStateChanged((user) => {
-            if (user) {
-              isFirebaseConnected = true;
-              // If there was no sync ID generated, or it was a local fallback ID, assign the authenticated UID
-              if (!syncId || syncId.startsWith('offline-')) {
-                syncId = user.uid;
-                localStorage.setItem('budget_sync_id', syncId);
-              }
-              setupFirestoreSync();
-            } else {
-              updateSyncStatus('offline', 'Unauthenticated');
-            }
-          });
-
-        } else {
-          updateSyncStatus('offline', 'Local-Only Mode');
-          setupLocalSyncIdFallback();
-        }
-      } catch (e) {
-        console.error("Firebase setup error:", e);
-        updateSyncStatus('offline', 'Local-Only Mode');
-        setupLocalSyncIdFallback();
-      }
-    }
-
-    function setupLocalSyncIdFallback() {
-      if (!syncId) {
-        syncId = 'offline-' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('budget_sync_id', syncId);
-      }
-      updateSyncStatus('offline', 'Local-Only Mode');
-      renderDashboard();
-    }
-
-    // Firestore Synchronization Loop (Rule 1: Strict path, Rule 2: Single-doc, Rule 3: Guarded)
-    function setupFirestoreSync() {
-      if (!isFirebaseConnected || !db || !auth.currentUser) return;
-
-      if (firestoreUnsubscribe) {
-        firestoreUnsubscribe();
-      }
-
-      const docRef = db.collection('artifacts').doc(appId)
-                       .collection('public').doc('data')
-                       .collection('syncBudgets').doc(syncId);
-
-      updateSyncStatus('syncing', 'Fetching ledger cloud stream...');
-
-      firestoreUnsubscribe = docRef.onSnapshot((docSnap) => {
-        if (docSnap.exists) {
-          const cloudData = docSnap.data();
-          // Check if cloud data is newer than local memory
-          if (cloudData.updatedAt > (appData.updatedAt || 0)) {
-            appData = cloudData;
-            localStorage.setItem('budget_app_data', JSON.stringify(appData));
-            renderDashboard();
-            showToast('Cloud Database Synchronized', 'success');
-          }
-        } else {
-          // Document does not exist yet. Initialize cloud with local cache.
-          uploadLocalDataToCloud();
-        }
-        updateSyncStatus('live', 'Cloud synced in real-time');
-      }, (err) => {
-        console.error("Firestore sync subscription failure:", err);
-        updateSyncStatus('offline', 'Stream failed. Local-Only.');
-      });
-    }
-
-    // Force upload current memory to Cloud
-    async function uploadLocalDataToCloud() {
-      if (!isFirebaseConnected || !db || !auth.currentUser) return;
-      try {
-        appData.updatedAt = Date.now();
-        const docRef = db.collection('artifacts').doc(appId)
-                         .collection('public').doc('data')
-                         .collection('syncBudgets').doc(syncId);
-        await docRef.set(appData);
-      } catch (err) {
-        console.error("Error updating cloud ledger:", err);
-      }
-    }
-
-    // Save state helper
-    function saveAndSyncState() {
-      appData.updatedAt = Date.now();
-      localStorage.setItem('budget_app_data', JSON.stringify(appData));
-      renderDashboard();
-      if (isFirebaseConnected && auth.currentUser) {
-        uploadLocalDataToCloud();
-      }
-    }
-
-    // UI Status updates
-    function updateSyncStatus(state, message) {
-      const sidebarIndicator = document.getElementById('sync-indicator-sidebar');
-      const sidebarText = document.getElementById('sync-status-sidebar');
-      const sidebarSyncIdText = document.getElementById('sidebar-sync-id');
-      const syncIdDisplay = document.getElementById('sync-id-display');
-
-      if (sidebarSyncIdText) sidebarSyncIdText.textContent = syncId || 'Local User';
-      if (syncIdDisplay) syncIdDisplay.textContent = syncId || 'Local-Only Mode';
-
-      if (!sidebarIndicator) return;
-
-      sidebarIndicator.className = 'w-2.5 h-2.5 rounded-full animate-pulse ';
-      if (state === 'live') {
-        sidebarIndicator.classList.add('bg-emerald-500');
-        sidebarText.textContent = message;
-      } else if (state === 'syncing') {
-        sidebarIndicator.classList.add('bg-amber-500');
-        sidebarText.textContent = message;
-      } else {
-        sidebarIndicator.classList.add('bg-slate-500');
-        sidebarText.textContent = message;
-      }
-    }
-
-    // --- LEDGER CALCULATION CORE ENGINE (CRITICAL ROLLOVER LOGIC) ---
-    function calculateLedgerFlow(data, targetMonth) {
-      const transactions = data.transactions || [];
-      const monthSettings = data.monthSettings || {};
-      const globalBaseBudget = Number(data.globalBaseBudget ?? 160000);
-
-      // 1. Locate earliest month in dataset (defaults to current month)
-      let earliestMonth = getMonthKeyString(new Date());
-      transactions.forEach(t => {
-        const m = t.date.substring(0, 7);
-        if (m < earliestMonth) earliestMonth = m;
-      });
-      Object.keys(monthSettings).forEach(m => {
-        if (m < earliestMonth) earliestMonth = m;
-      });
-
-      let currentLoopMonth = earliestMonth;
-      let accumulatedRollover = 0;
-      const history = {};
-
-      // 2. Compute sequentially up to the target viewed month
-      while (currentLoopMonth <= targetMonth) {
-        const settings = monthSettings[currentLoopMonth] || {};
-        const baseBudget = Number(settings.budgetOverride ?? globalBaseBudget);
-        const addedFunds = Number(settings.addedFunds ?? 0);
-
-        // Sum transaction amounts for this month
-        const monthTransactions = transactions.filter(t => t.date.substring(0, 7) === currentLoopMonth);
-        const spent = monthTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
-
-        const totalBudget = baseBudget + addedFunds + accumulatedRollover;
-        const leftover = totalBudget - spent;
-
-        history[currentLoopMonth] = {
-          baseBudget,
-          addedFunds,
-          rolloverIn: accumulatedRollover,
-          totalBudget,
-          spent,
-          leftover,
-          transactions: monthTransactions
-        };
-
-        accumulatedRollover = leftover;
-        currentLoopMonth = nextMonthKey(currentLoopMonth);
-      }
-
-      // If requested targetMonth was not computed (e.g. empty target in future), default build it
-      if (!history[targetMonth]) {
-        history[targetMonth] = {
-          baseBudget: globalBaseBudget,
-          addedFunds: 0,
-          rolloverIn: accumulatedRollover,
-          totalBudget: globalBaseBudget + accumulatedRollover,
-          spent: 0,
-          leftover: globalBaseBudget + accumulatedRollover,
-          transactions: []
-        };
-      }
-
-      return {
-        history,
-        target: history[targetMonth]
-      };
-    }
-
-    // Helper functions for month increments (Timezone Safe)
-    function getMonthKeyString(dateObj) {
-      const year = dateObj.getFullYear();
-      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-      return `${year}-${month}`;
-    }
-
-    // Timezone safe next month key
-    function nextMonthKey(monthKey) {
-      const [year, month] = monthKey.split('-').map(Number);
-      if (month === 12) {
-        return `${year + 1}-01`;
-      } else {
-        return `${year}-${String(month + 1).padStart(2, '0')}`;
-      }
-    }
-
-    // Timezone safe previous month key
-    function prevMonthKey(monthKey) {
-      const [year, month] = monthKey.split('-').map(Number);
-      if (month === 1) {
-        return `${year - 1}-12`;
-      } else {
-        return `${year}-${String(month - 1).padStart(2, '0')}`;
-      }
-    }
-
-    function formatMonthName(monthKey) {
-      const [year, month] = monthKey.split('-').map(Number);
-      const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-      return `${months[month - 1]} ${year}`;
-    }
-
-    // IQD Formatting Helper
-    function formatIQD(num) {
-      return Number(num).toLocaleString('en-US') + ' IQD';
-    }
-
-    // Navigate month selection
-    function navigateMonth(direction) {
-      if (direction === 1) {
-        currentMonthKey = nextMonthKey(currentMonthKey);
-      } else {
-        currentMonthKey = prevMonthKey(currentMonthKey);
-      }
-      renderDashboard();
-    }
-
-    // --- RENDER PIPELINE ---
-    function renderDashboard() {
-      // Populate custom Firebase setup configuration text input area if exists on screen
-      const customFirebaseInput = document.getElementById('setting-custom-firebase');
-      if (customFirebaseInput && !customFirebaseInput.dataset.initialised) {
-        customFirebaseInput.value = localStorage.getItem('custom_firebase_config') || '';
-        customFirebaseInput.dataset.initialised = "true";
-      }
-
-      // 1. Calculate cumulative engine
-      const ledgerFlow = calculateLedgerFlow(appData, currentMonthKey);
-      const targetData = ledgerFlow.target;
-
-      // 2. Set month headers
-      document.getElementById('view-month-label').textContent = formatMonthName(currentMonthKey);
-      
-      // Toggle Current Month Real-time Badge
-      const now = new Date();
-      const realWorldMonthKey = getMonthKeyString(now);
-      const realTimeBadge = document.getElementById('real-time-badge');
-      if (currentMonthKey === realWorldMonthKey) {
-        realTimeBadge.classList.remove('hidden');
-      } else {
-        realTimeBadge.classList.add('hidden');
-      }
-
-      // 3. Update top metric cards
-      document.getElementById('stat-remaining-balance').textContent = formatIQD(targetData.leftover);
-      document.getElementById('stat-total-budget').textContent = formatIQD(targetData.totalBudget);
-      document.getElementById('stat-total-spent').textContent = formatIQD(targetData.spent);
-
-      // Percentage & Progress Bars
-      const spentPercent = targetData.totalBudget > 0 ? Math.min(100, Math.round((targetData.spent / targetData.totalBudget) * 100)) : 100;
-      const leftPercent = 100 - spentPercent;
-      document.getElementById('stat-balance-bar').style.width = `${spentPercent}%`;
-      document.getElementById('stat-spent-percent').textContent = `${spentPercent}% Spent`;
-      document.getElementById('stat-left-percent').textContent = `${leftPercent}% Left`;
-
-      if (targetData.spent > targetData.totalBudget) {
-        document.getElementById('stat-balance-bar').className = "bg-rose-500 h-2 rounded-full transition-all duration-500";
-        document.getElementById('stat-remaining-balance').className = "text-3xl font-extrabold text-rose-400 tracking-tight";
-      } else {
-        document.getElementById('stat-balance-bar').className = "bg-emerald-500 h-2 rounded-full transition-all duration-500";
-        document.getElementById('stat-remaining-balance').className = "text-3xl font-extrabold text-emerald-400 tracking-tight";
-      }
-
-      // Count Label
-      const transactionCount = targetData.transactions.length;
-      document.getElementById('stat-transaction-count').textContent = `${transactionCount} Transaction${transactionCount === 1 ? '' : 's'} recorded this month`;
-
-      // 4. Update breakdown Tooltip Info
-      document.getElementById('tooltip-base').textContent = formatIQD(targetData.baseBudget);
-      document.getElementById('tooltip-extra').textContent = `+${formatIQD(targetData.addedFunds)}`;
-      document.getElementById('tooltip-rollover').textContent = `${targetData.rolloverIn >= 0 ? '+' : ''}${formatIQD(targetData.rolloverIn)}`;
-
-      // 5. Update direct Ledger Breakdown Row
-      document.getElementById('ledger-global-base').textContent = formatIQD(appData.globalBaseBudget ?? 160000);
-      document.getElementById('ledger-month-budget').textContent = formatIQD(targetData.baseBudget);
-      document.getElementById('ledger-extra-funds').textContent = `+${formatIQD(targetData.addedFunds)}`;
-      document.getElementById('ledger-rollover').textContent = `${targetData.rolloverIn >= 0 ? '+' : ''}${formatIQD(targetData.rolloverIn)}`;
-
-      // 6. Safe to Spend daily projection (Only visible on current real-world month)
-      const projectionContainer = document.getElementById('dynamic-projection-container');
-      if (currentMonthKey === realWorldMonthKey) {
-        projectionContainer.classList.remove('hidden');
-        
-        // Calculate remaining days
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        const currentDay = now.getDate();
-        const daysLeft = daysInMonth - currentDay + 1;
-
-        document.getElementById('projection-explanation').textContent = `There are ${daysLeft} days left in this month (ending on ${formatMonthName(currentMonthKey)} 31st). Keep your daily spending below the safe limit.`;
-        
-        // Set dynamic days limit inside input initially if empty or pristine
-        const projectionDaysInput = document.getElementById('projection-days-input');
-        if (!projectionDaysInput.dataset.modified) {
-          projectionDaysInput.value = daysLeft;
-        }
-
-        recalculateDailyProjection();
-      } else {
-        projectionContainer.classList.add('hidden');
-      }
-
-      // 7. Render settings panel specific values
-      document.getElementById('override-month-title').textContent = `Adjust Specific Month (${formatMonthName(currentMonthKey)})`;
-      document.getElementById('setting-global-base').value = appData.globalBaseBudget ?? 160000;
-      
-      const specificSetting = appData.monthSettings[currentMonthKey] || {};
-      document.getElementById('setting-month-override').value = specificSetting.budgetOverride ?? '';
-      document.getElementById('setting-month-extra').value = specificSetting.addedFunds ?? '';
-
-      // 8. Render transaction list
-      renderTransactions();
-
-      // 9. Redraw charts
-      renderCharts(ledgerFlow);
-
-      // Re-trigger icon parsing
-      safeCreateIcons();
-    }
-
-    // Calculate interactive daily projection
-    function recalculateDailyProjection() {
-      const projectionDaysInput = document.getElementById('projection-days-input');
-      projectionDaysInput.dataset.modified = "true";
-
-      const daysVal = Number(projectionDaysInput.value) || 1;
-      const ledgerFlow = calculateLedgerFlow(appData, currentMonthKey);
-      const remainingBalance = ledgerFlow.target.leftover;
-
-      const dailyLimit = remainingBalance > 0 ? Math.round(remainingBalance / daysVal) : 0;
-      document.getElementById('projection-limit-value').textContent = `${formatIQD(dailyLimit)} / day`;
-      
-      if (remainingBalance <= 0) {
-        document.getElementById('projection-limit-value').className = "text-lg md:text-xl font-extrabold text-rose-400";
-        document.getElementById('projection-limit-value').textContent = "0 IQD (Budget Exceeded)";
-      } else {
-        document.getElementById('projection-limit-value').className = "text-lg md:text-xl font-extrabold text-emerald-400";
-      }
-    }
-
-    // Render Transactions lists with search and filter applied
-    function renderTransactions() {
-      const ledgerFlow = calculateLedgerFlow(appData, currentMonthKey);
-      const filterText = document.getElementById('transaction-search').value.toLowerCase().trim();
-      const container = document.getElementById('transactions-list');
-      container.innerHTML = '';
-
-      let list = ledgerFlow.target.transactions || [];
-      
-      if (filterText) {
-        list = list.filter(t => t.description.toLowerCase().includes(filterText));
-      }
-
-      // Sort chronological descending (newest on top)
-      list.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-      document.getElementById('transaction-count-label').textContent = `Showing ${list.length} of ${ledgerFlow.target.transactions.length} transactions`;
-
-      if (list.length === 0) {
-        container.innerHTML = `
-          <div class="flex flex-col items-center justify-center py-10 text-center space-y-3">
-            <div class="p-3 bg-slate-900 border border-slate-800 rounded-2xl text-slate-500">
-              <i data-lucide="receipt" class="w-8 h-8"></i>
-            </div>
-            <p class="text-sm font-semibold text-slate-400">No transactions recorded</p>
-            <p class="text-xs text-slate-600 max-w-xs">Use the "Add Spending" button to log expense items for this month.</p>
-          </div>
-        `;
-        safeCreateIcons();
-        return;
-      }
-
-      list.forEach(item => {
-        const row = document.createElement('div');
-        row.className = "flex items-center justify-between p-4 bg-slate-900/60 border border-slate-800/80 rounded-xl hover:border-slate-700/80 transition-all duration-150 group";
-        
-        // Formatted Date
-        const dateObj = new Date(item.date);
-        const options = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-        const localDateFormatted = dateObj.toLocaleDateString('en-US', options);
-
-        row.innerHTML = `
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="p-2.5 bg-rose-500/10 text-rose-400 rounded-xl shrink-0">
-              <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-            </div>
-            <div class="min-w-0">
-              <p class="text-sm font-bold text-white capitalize truncate">${item.description || 'Food'}</p>
-              <p class="text-[10px] text-slate-500 font-semibold">${localDateFormatted}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-4">
-            <span class="font-extrabold text-sm text-rose-400">-${formatIQD(item.amount)}</span>
-            <button onclick="confirmDeleteTransaction('${item.id}')" class="text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 p-1.5 rounded-lg opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-150" title="Delete Transaction">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
+        <nav class="flex-1 px-4 space-y-2 mt-4">
+            <button onclick="switchTab('home')" id="nav-desktop-home" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-medium text-primary bg-indigo-50 transition-colors">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
             </button>
-          </div>
-        `;
-        container.appendChild(row);
-      });
+            <button onclick="switchTab('charts')" id="nav-desktop-charts" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                <i data-lucide="pie-chart" class="w-5 h-5"></i> Analytics
+            </button>
+            <button onclick="switchTab('settings')" id="nav-desktop-settings" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                <i data-lucide="settings" class="w-5 h-5"></i> Settings
+            </button>
+        </nav>
+        <div class="p-4 border-t border-slate-200">
+            <p class="text-xs text-slate-400 text-center">Sync ID connected</p>
+        </div>
+    </aside>
 
-      safeCreateIcons();
-    }
-
-    // --- TAB NAVIGATION SYSTEMS ---
-    function switchTab(tabName) {
-      // Hide all tabs
-      document.getElementById('tab-dashboard-view').classList.add('hidden');
-      document.getElementById('tab-analytics-view').classList.add('hidden');
-      document.getElementById('tab-settings-view').classList.add('hidden');
-
-      // Unselect all menu buttons
-      document.querySelectorAll('.nav-btn, .mobile-nav-btn').forEach(btn => {
-        btn.classList.remove('bg-emerald-600', 'text-white', 'text-emerald-500');
-        btn.classList.add('text-slate-400');
-      });
-
-      // Show target tab
-      document.getElementById(`tab-${tabName}-view`).classList.remove('hidden');
-
-      // Style active nav buttons
-      const desktopBtn = document.getElementById(`nav-${tabName}`);
-      if (desktopBtn) {
-        desktopBtn.classList.add('bg-emerald-600', 'text-white');
-        desktopBtn.classList.remove('text-slate-400');
-      }
-
-      const mobileBtn = document.getElementById(`mobile-nav-${tabName}`);
-      if (mobileBtn) {
-        mobileBtn.classList.add('text-emerald-500');
-        mobileBtn.classList.remove('text-slate-400');
-      }
-
-      // Re-trigger UI render & Chart alignments
-      if (tabName === 'analytics') {
-        const ledgerFlow = calculateLedgerFlow(appData, currentMonthKey);
-        renderCharts(ledgerFlow);
-      }
-      safeCreateIcons();
-    }
-
-    // --- CHART GRAPHICS (BURN RATE + 6-MONTH HISTORY) ---
-    function renderCharts(ledgerFlow) {
-      // Avoid parsing if analytics tab is not visible or if Chart.js is not loaded
-      const analyticsTab = document.getElementById('tab-analytics-view');
-      if (analyticsTab.classList.contains('hidden')) return;
-      if (typeof Chart === 'undefined') {
-        console.warn('Chart.js is not loaded or is blocked.');
-        return;
-      }
-
-      const targetData = ledgerFlow.target;
-      const [year, month] = currentMonthKey.split('-').map(Number);
-      const totalDaysInMonth = new Date(year, month, 0).getDate();
-
-      // Create Days labels (1 to DaysInMonth)
-      const dayLabels = Array.from({ length: totalDaysInMonth }, (_, i) => String(i + 1));
-
-      // --- CHART 1: MONTHLY BURN RATE ---
-      // 1. Gather daily cumulative spend values
-      const dailyActualSpend = Array(totalDaysInMonth).fill(0);
-      targetData.transactions.forEach(t => {
-        const tDay = new Date(t.date).getDate();
-        if (tDay <= totalDaysInMonth) {
-          dailyActualSpend[tDay - 1] += Number(t.amount);
-        }
-      });
-
-      const cumulativeActualSpend = [];
-      let currentCumulative = 0;
-      const todayDate = new Date();
-      const isCurrentMonth = currentMonthKey === getMonthKeyString(todayDate);
-      const activeCurrentDay = todayDate.getDate();
-
-      for (let day = 1; day <= totalDaysInMonth; day++) {
-        // For current month, do not display actual spend past today's date
-        if (isCurrentMonth && day > activeCurrentDay) {
-          cumulativeActualSpend.push(null);
-        } else {
-          currentCumulative += dailyActualSpend[day - 1];
-          cumulativeActualSpend.push(currentCumulative);
-        }
-      }
-
-      // 2. Compute forecast prediction dataset
-      const cumulativePredictionSpend = Array(totalDaysInMonth).fill(null);
-      if (isCurrentMonth && activeCurrentDay < totalDaysInMonth) {
-        // Average burn rate per day
-        const actualTodayCumulative = cumulativeActualSpend[activeCurrentDay - 1] || 0;
-        const avgBurnPerDay = actualTodayCumulative / activeCurrentDay;
-
-        // Prediction line must connect smoothly from today's actual
-        cumulativePredictionSpend[activeCurrentDay - 1] = actualTodayCumulative;
-
-        for (let day = activeCurrentDay + 1; day <= totalDaysInMonth; day++) {
-          cumulativePredictionSpend[day - 1] = Math.round(actualTodayCumulative + (day - activeCurrentDay) * avgBurnPerDay);
-        }
-
-        // Set Analytics insight parameters
-        document.getElementById('insight-avg-daily').textContent = formatIQD(Math.round(avgBurnPerDay));
-        const finalProjectedTotal = cumulativePredictionSpend[totalDaysInMonth - 1] || 0;
-        const budgetDifference = targetData.totalBudget - finalProjectedTotal;
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col h-full relative overflow-hidden">
         
-        if (budgetDifference >= 0) {
-          document.getElementById('insight-projected-end').textContent = `Save ${formatIQD(budgetDifference)}`;
-          document.getElementById('insight-projected-end').className = "text-lg font-bold text-emerald-400";
-        } else {
-          document.getElementById('insight-projected-end').textContent = `Overspent ${formatIQD(Math.abs(budgetDifference))}`;
-          document.getElementById('insight-projected-end').className = "text-lg font-bold text-rose-400";
-        }
+        <!-- Global Month Selector -->
+        <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-10 px-4 py-4 flex justify-between items-center shadow-sm">
+            <button onclick="changeMonth(-1)" class="p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-600"><i data-lucide="chevron-left"></i></button>
+            <div class="flex flex-col items-center">
+                <h2 id="currentMonthDisplay" class="font-bold text-lg md:text-xl text-slate-800">Month Year</h2>
+                <span id="currentStatusBadge" class="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 hidden">Current Month</span>
+            </div>
+            <button onclick="changeMonth(1)" class="p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-600"><i data-lucide="chevron-right"></i></button>
+        </header>
 
-      } else {
-        // Past or future month static insight parameters
-        const dailyAvgStatic = targetData.transactions.length > 0 ? Math.round(targetData.spent / totalDaysInMonth) : 0;
-        document.getElementById('insight-avg-daily').textContent = formatIQD(dailyAvgStatic);
-        
-        const leftoverDifference = targetData.leftover;
-        if (leftoverDifference >= 0) {
-          document.getElementById('insight-projected-end').textContent = `Saved ${formatIQD(leftoverDifference)}`;
-          document.getElementById('insight-projected-end').className = "text-lg font-bold text-emerald-400";
-        } else {
-          document.getElementById('insight-projected-end').textContent = `Overspent ${formatIQD(Math.abs(leftoverDifference))}`;
-          document.getElementById('insight-projected-end').className = "text-lg font-bold text-rose-400";
-        }
-      }
+        <!-- Scrollable Views -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
+            
+            <!-- HOME TAB -->
+            <div id="tab-home" class="tab-content active max-w-5xl mx-auto">
+                <!-- Overview Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between">
+                        <div class="flex justify-between items-start mb-2">
+                            <p class="text-sm font-medium text-slate-500">Remaining Balance</p>
+                            <div class="p-2 bg-green-50 rounded-lg text-green-600"><i data-lucide="banknote" class="w-5 h-5"></i></div>
+                        </div>
+                        <h3 id="dashRemaining" class="text-3xl font-bold text-slate-800">0 IQD</h3>
+                        <div class="mt-4 bg-slate-100 rounded-full h-2 overflow-hidden">
+                            <div id="dashProgressBar" class="bg-green-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between">
+                        <div class="flex justify-between items-start mb-2">
+                            <p class="text-sm font-medium text-slate-500">Total Spent</p>
+                            <div class="p-2 bg-red-50 rounded-lg text-red-600"><i data-lucide="trending-down" class="w-5 h-5"></i></div>
+                        </div>
+                        <h3 id="dashSpent" class="text-3xl font-bold text-slate-800">0 IQD</h3>
+                        <p class="text-sm text-slate-400 mt-2">This month</p>
+                    </div>
 
-      // Find top descriptive category category item
-      const categoryMap = {};
-      targetData.transactions.forEach(t => {
-        const desc = (t.description || 'food').toLowerCase().trim();
-        categoryMap[desc] = (categoryMap[desc] || 0) + Number(t.amount);
-      });
-      let topCategory = '-';
-      let maxAmount = 0;
-      Object.keys(categoryMap).forEach(key => {
-        if (categoryMap[key] > maxAmount) {
-          maxAmount = categoryMap[key];
-          topCategory = `${key} (${formatIQD(maxAmount)})`;
-        }
-      });
-      document.getElementById('insight-top-description').textContent = topCategory;
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between">
+                        <div class="flex justify-between items-start mb-2">
+                            <p class="text-sm font-medium text-slate-500">Total Budget</p>
+                            <div class="p-2 bg-indigo-50 rounded-lg text-indigo-600"><i data-lucide="piggy-bank" class="w-5 h-5"></i></div>
+                        </div>
+                        <h3 id="dashTotalBudget" class="text-3xl font-bold text-slate-800">0 IQD</h3>
+                        <div class="mt-2 flex flex-wrap gap-1 text-xs text-slate-500" id="dashBudgetBreakdown">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
 
-      // Draw Burn Rate Chart
-      if (burnRateChartInstance) {
-        burnRateChartInstance.destroy();
-      }
+                <!-- Safe to Spend (Current Month Only) -->
+                <div id="safeToSpendCard" class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 shadow-md mb-8 text-white hidden">
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div>
+                            <h4 class="text-lg font-semibold flex items-center gap-2"><i data-lucide="shield-check" class="w-5 h-5"></i> Safe to Spend Projection</h4>
+                            <p class="text-indigo-100 text-sm mt-1">Based on remaining balance and days left.</p>
+                        </div>
+                        <div class="bg-white/20 p-4 rounded-xl backdrop-blur-sm text-center min-w-[200px]">
+                            <p class="text-sm text-indigo-100 mb-1">Daily Limit</p>
+                            <p id="safeDailyLimit" class="text-2xl font-bold">0 IQD</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center gap-3 bg-white/10 p-3 rounded-lg w-fit">
+                        <label class="text-sm text-indigo-100">Calculate for</label>
+                        <input type="number" id="safeDaysInput" class="w-16 bg-white/20 border border-white/30 rounded px-2 py-1 text-white text-center focus:outline-none focus:ring-2 focus:ring-white/50" value="7" min="1" oninput="calculateSafeToSpend()">
+                        <span class="text-sm text-indigo-100">days</span>
+                        <div class="mx-2 w-px h-6 bg-white/30"></div>
+                        <p class="font-semibold" id="safeCustomLimit">0 IQD</p>
+                    </div>
+                </div>
 
-      const burnRateCtx = document.getElementById('burnRateChart').getContext('2d');
-      burnRateChartInstance = new Chart(burnRateCtx, {
-        type: 'line',
-        data: {
-          labels: dayLabels,
-          datasets: [
-            {
-              label: 'Actual Spending (IQD)',
-              data: cumulativeActualSpend,
-              borderColor: '#10b981',
-              backgroundColor: 'rgba(16, 185, 129, 0.05)',
-              borderWidth: 3,
-              tension: 0.1,
-              fill: true,
-              spanGaps: false
-            },
-            {
-              label: 'Forecast Projection (IQD)',
-              data: cumulativePredictionSpend,
-              borderColor: '#f59e0b',
-              borderDash: [6, 6],
-              borderWidth: 2,
-              pointStyle: 'circle',
-              pointRadius: 1,
-              tension: 0.1,
-              fill: false
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', weight: 'bold' } }
-            },
-            tooltip: {
-              callbacks: {
-                label: (context) => `Cumulative Spend: ${formatIQD(context.raw)}`
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: { color: 'rgba(51, 65, 85, 0.2)' },
-              ticks: { color: '#64748b' }
-            },
-            y: {
-              grid: { color: 'rgba(51, 65, 85, 0.2)' },
-              ticks: {
-                color: '#64748b',
-                callback: (value) => value >= 1000 ? (value / 1000) + 'k' : value
-              }
-            }
-          }
-        }
-      });
+                <!-- Month Adjustments & Transactions -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    
+                    <!-- Transactions List -->
+                    <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                            <h3 class="font-bold text-lg text-slate-800">Transactions</h3>
+                            <button onclick="openModal('addTxModal')" class="hidden md:flex bg-primary hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors items-center gap-2">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Add Expense
+                            </button>
+                        </div>
+                        <div id="transactionList" class="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
 
+                    <!-- Month Settings -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 h-fit">
+                        <h3 class="font-bold text-lg text-slate-800 mb-4 border-b pb-2">Month Settings</h3>
+                        <p class="text-sm text-slate-500 mb-4">Override defaults for <span id="settingsMonthLabel" class="font-semibold text-slate-700"></span>.</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Base Budget Override (IQD)</label>
+                                <input type="number" id="monthBaseOverride" class="w-full border-slate-300 rounded-lg shadow-sm px-4 py-2 border focus:ring-primary focus:border-primary text-slate-800" placeholder="e.g. 150000">
+                                <p class="text-xs text-slate-400 mt-1">Leave blank to use global default.</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Extra Funds (IQD)</label>
+                                <input type="number" id="monthExtraFunds" class="w-full border-slate-300 rounded-lg shadow-sm px-4 py-2 border focus:ring-primary focus:border-primary text-slate-800" placeholder="e.g. 20000" value="0">
+                            </div>
+                            <button onclick="saveMonthSettings()" class="w-full bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                Apply Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-      // --- CHART 2: 6-MONTH STACKED LEDGER HISTORY ---
-      const historyMonthKeys = [];
-      let scanKey = currentMonthKey;
-      for (let i = 0; i < 6; i++) {
-        historyMonthKeys.unshift(scanKey);
-        scanKey = prevMonthKey(scanKey);
-      }
+            <!-- CHARTS TAB -->
+            <div id="tab-charts" class="tab-content max-w-5xl mx-auto space-y-8">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-lg text-slate-800 mb-2">Monthly Burn Rate</h3>
+                    <p class="text-sm text-slate-500 mb-6">Cumulative spending day-by-day for the selected month.</p>
+                    <div class="relative h-72 w-full">
+                        <canvas id="burnRateChart"></canvas>
+                    </div>
+                </div>
 
-      const labels6Month = historyMonthKeys.map(k => {
-        const [y, m] = k.split('-');
-        const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        return `${shortMonths[Number(m) - 1]} '${y.substring(2)}`;
-      });
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-lg text-slate-800 mb-2">6-Month Ledger History</h3>
+                    <p class="text-sm text-slate-500 mb-6">Budget performance leading up to the selected month.</p>
+                    <div class="relative h-80 w-full">
+                        <canvas id="ledgerChart"></canvas>
+                    </div>
+                </div>
+            </div>
 
-      const spentWithinLimitData = [];
-      const moneySavedData = [];
-      const moneyOverspentData = [];
+            <!-- SETTINGS TAB -->
+            <div id="tab-settings" class="tab-content max-w-3xl mx-auto space-y-6">
+                
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="globe" class="w-5 h-5 text-slate-400"></i> Global Settings</h3>
+                    <div class="max-w-md">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Default Base Budget (IQD)</label>
+                        <div class="flex gap-2">
+                            <input type="number" id="globalBaseInput" class="flex-1 border-slate-300 rounded-lg shadow-sm px-4 py-2 border focus:ring-primary focus:border-primary" value="160000">
+                            <button onclick="saveGlobalBase()" class="bg-primary hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Save</button>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-2">This is the default budget for any month unless overridden.</p>
+                    </div>
+                </div>
 
-      historyMonthKeys.forEach(k => {
-        const monthCalculation = ledgerFlow.history[k] || {
-          baseBudget: appData.globalBaseBudget ?? 160000,
-          addedFunds: 0,
-          rolloverIn: 0,
-          totalBudget: appData.globalBaseBudget ?? 160000,
-          spent: 0,
-          leftover: appData.globalBaseBudget ?? 160000
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="cloud-sync" class="w-5 h-5 text-slate-400"></i> Firebase Cloud Sync</h3>
+                    <p class="text-sm text-slate-600 mb-4">Your data is synced automatically. Use this ID to sync across your devices.</p>
+                    
+                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 mb-4">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Your Sync ID</label>
+                        <div class="flex items-center gap-2">
+                            <code id="displaySyncId" class="flex-1 bg-white border border-slate-200 px-3 py-2 rounded text-sm text-slate-800 font-mono select-all overflow-x-auto">Loading...</code>
+                            <button onclick="copySyncId()" class="p-2 bg-white border border-slate-200 rounded hover:bg-slate-100 text-slate-600 tooltip" title="Copy to clipboard">
+                                <i data-lucide="copy" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-100 pt-4">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Connect to Existing Account</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="pasteSyncId" class="flex-1 border-slate-300 rounded-lg shadow-sm px-4 py-2 border focus:ring-primary focus:border-primary text-sm font-mono" placeholder="Paste Sync ID here...">
+                            <button onclick="importSyncId()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                <i data-lucide="download-cloud" class="w-4 h-4"></i> Sync
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="database" class="w-5 h-5 text-slate-400"></i> Data Management</h3>
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="exportData()" class="flex items-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            <i data-lucide="download" class="w-4 h-4"></i> Export JSON
+                        </button>
+                        <button onclick="document.getElementById('importFile').click()" class="flex items-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            <i data-lucide="upload" class="w-4 h-4"></i> Import JSON
+                        </button>
+                        <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
+                        
+                        <div class="flex-1"></div>
+                        
+                        <button onclick="openModal('wipeModal')" class="flex items-center gap-2 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i> Wipe All Data
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Mobile Bottom Nav -->
+        <nav class="md:hidden bg-white border-t border-slate-200 fixed bottom-0 w-full z-20 pb-safe">
+            <div class="flex justify-around">
+                <button onclick="switchTab('home')" id="nav-mobile-home" class="flex-1 py-3 flex flex-col items-center gap-1 text-primary relative">
+                    <i data-lucide="layout-dashboard" class="w-6 h-6"></i>
+                    <span class="text-[10px] font-medium">Home</span>
+                </button>
+                <div class="flex-1 relative flex justify-center">
+                    <button onclick="openModal('addTxModal')" class="absolute -top-6 bg-primary hover:bg-indigo-700 text-white p-4 rounded-full shadow-lg shadow-indigo-200 transition-transform transform active:scale-95 border-4 border-white">
+                        <i data-lucide="plus" class="w-6 h-6"></i>
+                    </button>
+                </div>
+                <button onclick="switchTab('charts')" id="nav-mobile-charts" class="flex-1 py-3 flex flex-col items-center gap-1 text-slate-400">
+                    <i data-lucide="pie-chart" class="w-6 h-6"></i>
+                    <span class="text-[10px] font-medium">Charts</span>
+                </button>
+                <button onclick="switchTab('settings')" id="nav-mobile-settings" class="flex-1 py-3 flex flex-col items-center gap-1 text-slate-400">
+                    <i data-lucide="settings" class="w-6 h-6"></i>
+                    <span class="text-[10px] font-medium">Settings</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Floating Add Button (Desktop) -->
+        <button onclick="openModal('addTxModal')" class="hidden md:flex absolute bottom-8 right-8 bg-primary hover:bg-indigo-700 text-white p-4 rounded-full shadow-lg shadow-indigo-200 transition-transform hover:scale-105 z-20">
+            <i data-lucide="plus" class="w-6 h-6"></i>
+        </button>
+
+    </main>
+
+    <!-- MODALS -->
+    
+    <!-- Add Transaction Modal -->
+    <dialog id="addTxModal" class="bg-transparent w-full max-w-md p-4 m-auto fixed inset-0">
+        <div class="bg-white rounded-2xl shadow-xl w-full overflow-hidden border border-slate-100">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-lg text-slate-800">Add Spending</h3>
+                <button onclick="closeModal('addTxModal')" class="p-1 text-slate-400 hover:text-slate-600 rounded"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form id="addTxForm" onsubmit="handleAddTx(event)" class="p-5 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Amount (IQD)</label>
+                    <input type="number" id="txAmount" required min="1" class="w-full border-slate-300 rounded-lg shadow-sm px-4 py-2 border focus:ring-primary focus:border-primary text-slate-800" placeholder="e.g. 15000">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                    <input type="text" id="txDesc" required class="w-full border-slate-300 rounded-lg shadow-sm px-4 py-2 border focus:ring-primary focus:border-primary text-slate-800" value="Food">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Date & Time</label>
+                    <input type="datetime-local" id="txDate" required class="w-full border-slate-300 rounded-lg shadow-sm px-4 py-2 border focus:ring-primary focus:border-primary text-slate-800 text-sm">
+                    <p class="text-xs text-slate-500 mt-1">Transaction belongs to the month selected here.</p>
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-primary hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-md">Add Transaction</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <!-- Delete Confimation Modal -->
+    <dialog id="deleteModal" class="bg-transparent w-full max-w-sm p-4 m-auto fixed inset-0">
+        <div class="bg-white rounded-2xl shadow-xl p-6 border border-slate-100 text-center">
+            <div class="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <i data-lucide="alert-triangle" class="w-6 h-6 text-red-600"></i>
+            </div>
+            <h3 class="font-bold text-lg text-slate-800 mb-2">Delete Transaction?</h3>
+            <p class="text-sm text-slate-500 mb-6">This action cannot be undone and will affect rollover calculations.</p>
+            <div class="flex gap-3">
+                <button onclick="closeModal('deleteModal')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium transition-colors">Cancel</button>
+                <button id="confirmDeleteBtn" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">Delete</button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Wipe Confirmation Modal -->
+    <dialog id="wipeModal" class="bg-transparent w-full max-w-sm p-4 m-auto fixed inset-0">
+        <div class="bg-white rounded-2xl shadow-xl p-6 border border-slate-100 text-center">
+            <div class="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <i data-lucide="trash-2" class="w-6 h-6 text-red-600"></i>
+            </div>
+            <h3 class="font-bold text-lg text-slate-800 mb-2">Wipe All Data?</h3>
+            <p class="text-sm text-slate-500 mb-6">This will delete all history, settings, and transactions. It cannot be undone.</p>
+            <div class="flex gap-3">
+                <button onclick="closeModal('wipeModal')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium transition-colors">Cancel</button>
+                <button onclick="executeWipe()" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">Yes, Wipe</button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- General Message Modal -->
+    <dialog id="msgModal" class="bg-transparent w-full max-w-sm p-4 m-auto fixed inset-0 z-50">
+        <div class="bg-white rounded-2xl shadow-xl p-6 border border-slate-100 text-center">
+            <div id="msgIcon" class="mx-auto w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
+                <i data-lucide="info" class="w-6 h-6 text-indigo-600"></i>
+            </div>
+            <h3 id="msgTitle" class="font-bold text-lg text-slate-800 mb-2">Message</h3>
+            <p id="msgText" class="text-sm text-slate-500 mb-6">Details here.</p>
+            <button onclick="closeModal('msgModal')" class="w-full bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-medium transition-colors">OK</button>
+        </div>
+    </dialog>
+
+    <!-- Script Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // --- App State ---
+        let currentMonthDate = new Date(); // Represents the currently viewed month
+        let deleteTargetId = null;
+        let burnRateChartInstance = null;
+        let ledgerChartInstance = null;
+
+        // Data structure
+        let appData = {
+            globalBase: 160000,
+            monthlySettings: {}, // { "2026-06": { base: 150000, extra: 20000 } }
+            transactions: [] // { id, amount, desc, date, monthKey }
         };
 
-        const totalBudget = monthCalculation.totalBudget;
-        const spent = monthCalculation.spent;
-
-        if (spent <= totalBudget) {
-          spentWithinLimitData.push(spent);
-          moneySavedData.push(totalBudget - spent);
-          moneyOverspentData.push(0);
-        } else {
-          spentWithinLimitData.push(totalBudget);
-          moneySavedData.push(0);
-          moneyOverspentData.push(spent - totalBudget);
-        }
-      });
-
-      if (historyChartInstance) {
-        historyChartInstance.destroy();
-      }
-
-      const historyCtx = document.getElementById('historyChart').getContext('2d');
-      historyChartInstance = new Chart(historyCtx, {
-        type: 'bar',
-        data: {
-          labels: labels6Month,
-          datasets: [
-            {
-              label: 'Spent within Budget',
-              data: spentWithinLimitData,
-              backgroundColor: '#0284c7' // Blue
-            },
-            {
-              label: 'Money Saved (Leftover)',
-              data: moneySavedData,
-              backgroundColor: '#10b981' // Green
-            },
-            {
-              label: 'Overspent Limit',
-              data: moneyOverspentData,
-              backgroundColor: '#ef4444' // Red
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', weight: 'bold' } }
-            },
-            tooltip: {
-              callbacks: {
-                label: (context) => `${context.dataset.label}: ${formatIQD(context.raw)}`
-              }
-            }
-          },
-          scales: {
-            x: {
-              stacked: true,
-              grid: { display: false },
-              ticks: { color: '#64748b' }
-            },
-            y: {
-              stacked: true,
-              grid: { color: 'rgba(51, 65, 85, 0.2)' },
-              ticks: {
-                color: '#64748b',
-                callback: (value) => value >= 1000 ? (value / 1000) + 'k' : value
-              }
-            }
-          }
-        }
-      });
-    }
-
-    // --- DIALOG MODALS ENGINE (NO ALERT / NO CONFIRM BLOCKERS) ---
-    function openAddSpendingModal() {
-      // Set default input times inside local calendar structure
-      const now = new Date();
-      const localISOString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
-        .toISOString()
-        .substring(0, 16);
-      
-      document.getElementById('form-datetime').value = localISOString;
-      document.getElementById('form-amount').value = '';
-      document.getElementById('form-description').value = 'food';
-
-      showBackdropModal('modal-add-spending');
-    }
-
-    function confirmDeleteTransaction(id) {
-      transactionToDeleteId = id;
-      document.getElementById('btn-confirm-delete').onclick = () => executeDeleteTransaction();
-      showBackdropModal('modal-delete-confirm');
-    }
-
-    // Trigger Wipe Database Dialog Confirmation
-    function openWipeModal() {
-      showBackdropModal('modal-wipe-confirm');
-    }
-
-    function showBackdropModal(modalContentId) {
-      const backdrop = document.getElementById('custom-modal-backdrop');
-      
-      // Hide all modals elements first
-      document.getElementById('modal-add-spending').classList.add('hidden');
-      document.getElementById('modal-delete-confirm').classList.add('hidden');
-      document.getElementById('modal-wipe-confirm').classList.add('hidden');
-
-      // Display container
-      backdrop.classList.remove('hidden');
-      backdrop.classList.add('flex');
-      
-      // Show content element
-      document.getElementById(modalContentId).classList.remove('hidden');
-      safeCreateIcons();
-    }
-
-    function closeModal() {
-      const backdrop = document.getElementById('custom-modal-backdrop');
-      backdrop.classList.add('hidden');
-      backdrop.classList.remove('flex');
-    }
-
-    // --- RECONCILE ACTIONS & MUTATIONS ---
-
-    // Save transaction
-    function saveTransaction(e) {
-      e.preventDefault();
-
-      const amount = Math.abs(Number(document.getElementById('form-amount').value));
-      const description = document.getElementById('form-description').value.trim() || 'food';
-      const dateTimeVal = document.getElementById('form-datetime').value;
-
-      if (!amount || isNaN(amount)) {
-        showToast('Please enter a valid numeric amount', 'error');
-        return;
-      }
-
-      const newTx = {
-        id: 'tx-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now(),
-        amount,
-        description,
-        date: dateTimeVal // YYYY-MM-DDTHH:MM
-      };
-
-      appData.transactions.push(newTx);
-      saveAndSyncState();
-      
-      closeModal();
-      showToast('Transaction recorded successfully!', 'success');
-    }
-
-    // Delete transaction
-    function executeDeleteTransaction() {
-      if (!transactionToDeleteId) return;
-
-      appData.transactions = appData.transactions.filter(t => t.id !== transactionToDeleteId);
-      saveAndSyncState();
-
-      transactionToDeleteId = null;
-      closeModal();
-      showToast('Transaction removed', 'info');
-    }
-
-    // Update global base budget template
-    function updateGlobalBaseBudget() {
-      const globalInput = document.getElementById('setting-global-base');
-      const val = Number(globalInput.value);
-
-      if (isNaN(val) || val <= 0) {
-        showToast('Please enter a valid global base budget limit', 'error');
-        return;
-      }
-
-      appData.globalBaseBudget = val;
-      saveAndSyncState();
-      showToast('Global base budget template updated', 'success');
-    }
-
-    // Update specific month budget allocations
-    function updateMonthBudgetSettings() {
-      const overrideInput = document.getElementById('setting-month-override').value;
-      const extraInput = document.getElementById('setting-month-extra').value;
-
-      const overrideVal = overrideInput === '' ? null : Number(overrideInput);
-      const extraVal = extraInput === '' ? 0 : Number(extraInput);
-
-      if (overrideVal !== null && (isNaN(overrideVal) || overrideVal < 0)) {
-        showToast('Invalid custom month override budget value', 'error');
-        return;
-      }
-      if (isNaN(extraVal) || extraVal < 0) {
-        showToast('Invalid added extra funds value', 'error');
-        return;
-      }
-
-      // Initialize month configurations object if empty
-      if (!appData.monthSettings[currentMonthKey]) {
-        appData.monthSettings[currentMonthKey] = {};
-      }
-
-      appData.monthSettings[currentMonthKey].budgetOverride = overrideVal;
-      appData.monthSettings[currentMonthKey].addedFunds = extraVal;
-
-      saveAndSyncState();
-      showToast(`Budget configuration updated for ${formatMonthName(currentMonthKey)}`, 'success');
-    }
-
-    // Reset current month configurations to defaults
-    function resetMonthBudgetSettings() {
-      if (appData.monthSettings[currentMonthKey]) {
-        delete appData.monthSettings[currentMonthKey];
-        saveAndSyncState();
-        showToast(`Budget template defaults restored for ${formatMonthName(currentMonthKey)}`, 'info');
-      } else {
-        showToast('This month already utilizes default budget configurations', 'info');
-      }
-    }
-
-    // Wipe all localized and synced structures
-    function executeWipeData() {
-      appData = {
-        globalBaseBudget: 160000,
-        monthSettings: {},
-        transactions: [],
-        updatedAt: Date.now()
-      };
-      
-      saveAndSyncState();
-      closeModal();
-      showToast('All transaction registers and ledger variables wiped', 'info');
-    }
-
-    // --- COOPERATIVE CLOUD SYNC & DEVICE LINKING ---
-
-    // Save user pasted Firebase Configuration
-    function saveCustomFirebaseConfig() {
-      const configText = document.getElementById('setting-custom-firebase').value.trim();
-      if (!configText) {
-        showToast('Please paste a valid Firebase config JSON', 'error');
-        return;
-      }
-      try {
-        const parsed = JSON.parse(configText);
-        if (!parsed.apiKey || !parsed.projectId) {
-          showToast('Invalid configuration: Must be a standard Firebase config object', 'error');
-          return;
-        }
-        localStorage.setItem('custom_firebase_config', configText);
+        // --- Utility Functions ---
+        const fmtCurrency = (num) => new Intl.NumberFormat('en-IQ').format(Math.round(num)) + ' IQD';
         
-        // Remove old offline ID to force real-time Online ID upgrade
-        if (syncId && syncId.startsWith('offline-')) {
-          localStorage.removeItem('budget_sync_id');
-        }
+        const getMonthKey = (dateObj) => {
+            return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+        };
 
-        showToast('Configuration applied! Connecting to database...', 'success');
-        setTimeout(() => {
-          window.location.reload();
-        }, 1200);
-      } catch (err) {
-        showToast('JSON parse error. Verify copy format brackets.', 'error');
-      }
-    }
+        const incrementMonthKey = (key) => {
+            const [y, m] = key.split('-').map(Number);
+            const d = new Date(y, m - 1, 1);
+            d.setMonth(d.getMonth() + 1);
+            return getMonthKey(d);
+        };
 
-    // Clear Custom Firebase Configuration
-    function clearCustomFirebaseConfig() {
-      localStorage.removeItem('custom_firebase_config');
-      localStorage.removeItem('budget_sync_id');
-      showToast('Custom Firebase config cleared. Reverting to offline.', 'info');
-      setTimeout(() => {
-        window.location.reload();
-      }, 1200);
-    }
+        const getDisplayMonthName = (dateObj) => {
+            return dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        };
 
-    // Copy Sync ID to user clipboard (Secure Compat fallback)
-    function copySyncID() {
-      if (!syncId) {
-        showToast('No Active Sync ID available', 'error');
-        return;
-      }
+        // UI Modals
+        window.openModal = (id) => document.getElementById(id).showModal();
+        window.closeModal = (id) => document.getElementById(id).close();
+        
+        window.showMsg = (title, text, isError = false) => {
+            document.getElementById('msgTitle').innerText = title;
+            document.getElementById('msgText').innerText = text;
+            const iconDiv = document.getElementById('msgIcon');
+            if(isError) {
+                iconDiv.className = "mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4";
+                iconDiv.innerHTML = `<i data-lucide="alert-circle" class="w-6 h-6 text-red-600"></i>`;
+            } else {
+                iconDiv.className = "mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4";
+                iconDiv.innerHTML = `<i data-lucide="check-circle" class="w-6 h-6 text-green-600"></i>`;
+            }
+            lucide.createIcons();
+            openModal('msgModal');
+        };
 
-      const tempArea = document.createElement('textarea');
-      tempArea.value = syncId;
-      document.body.appendChild(tempArea);
-      tempArea.select();
-      
-      try {
-        const copySuccess = document.execCommand('copy');
-        if (copySuccess) {
-          showToast('Sync ID copied to clipboard!', 'success');
-        } else {
-          showToast('Failed to copy. Try selecting text manually.', 'error');
-        }
-      } catch (err) {
-        showToast('Copying blocked by frame permissions. Select text manually.', 'error');
-      }
-      document.body.removeChild(tempArea);
-    }
-
-    // Link a companion Device ID (Replaces Sync Reference)
-    function linkCompanionDevice() {
-      const companionInput = document.getElementById('sync-paste-input').value.trim();
-
-      if (!companionInput) {
-        showToast('Please paste a companion Sync ID', 'error');
-        return;
-      }
-
-      if (companionInput === syncId) {
-        showToast('This ID matches your active device', 'info');
-        return;
-      }
-
-      // Reassign local Sync pointer
-      syncId = companionInput;
-      localStorage.setItem('budget_sync_id', syncId);
-
-      // Re-establish cloud sync stream
-      setupFirestoreSync();
-
-      // Clear input and update
-      document.getElementById('sync-paste-input').value = '';
-      showToast('Device link initialized successfully!', 'success');
-    }
-
-    // --- OFFLINE EXPORT & IMPORT ACTIONS ---
-
-    // Export Data JSON File
-    function exportDataJSON() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `iqd_ledger_backup_${Date.now()}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-      showToast('JSON Backup downloaded', 'success');
-    }
-
-    // Trigger Import Picker
-    function triggerJSONImport() {
-      document.getElementById('import-file-picker').click();
-    }
-
-    // Import Data JSON File
-    function importDataJSON(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const parsed = JSON.parse(e.target.result);
-          
-          // Structural checks
-          if (parsed && typeof parsed === 'object') {
-            appData.globalBaseBudget = Number(parsed.globalBaseBudget ?? 160000);
-            appData.monthSettings = parsed.monthSettings || {};
-            appData.transactions = parsed.transactions || [];
+        // Navigation
+        window.switchTab = (tabId) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
             
-            saveAndSyncState();
-            showToast('JSON Backup file imported successfully!', 'success');
-          } else {
-            showToast('Invalid JSON ledger structure format', 'error');
-          }
-        } catch (err) {
-          console.error("JSON parsing error:", err);
-          showToast('Could not parse JSON ledger. Check source file integrity.', 'error');
+            // Update styling desktop
+            ['home', 'charts', 'settings'].forEach(id => {
+                const el = document.getElementById(`nav-desktop-${id}`);
+                if(el) {
+                    if(id === tabId) el.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-medium text-primary bg-indigo-50 transition-colors";
+                    else el.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors";
+                }
+                const mb = document.getElementById(`nav-mobile-${id}`);
+                if(mb) {
+                    if(id === tabId) mb.className = "flex-1 py-3 flex flex-col items-center gap-1 text-primary relative";
+                    else mb.className = "flex-1 py-3 flex flex-col items-center gap-1 text-slate-400";
+                }
+            });
+
+            if (tabId === 'charts') renderCharts();
+        };
+
+        // --- Core Budget Logic ---
+
+        function getEarliestMonthKey() {
+            let earliest = getMonthKey(new Date()); // default to now
+            if (appData.transactions.length > 0) {
+                appData.transactions.forEach(t => {
+                    if (t.monthKey < earliest) earliest = t.monthKey;
+                });
+            }
+            Object.keys(appData.monthlySettings).forEach(key => {
+                if (key < earliest) earliest = key;
+            });
+            return earliest;
         }
-      };
-      reader.readAsText(file);
-    }
 
-    // --- REUSABLE TOAST NOTIFICATION STACK ---
-    function showToast(message, type = 'success') {
-      const container = document.getElementById('toast-container');
-      if (!container) return;
+        function calculateMonthStats(targetKey) {
+            let current = getEarliestMonthKey();
+            let rollover = 0;
+            let targetStats = null;
 
-      const toast = document.createElement('div');
-      
-      // Dynamic Styling based on Contexts
-      let bgTheme = 'bg-slate-900 border-emerald-500/30 text-emerald-400';
-      let iconName = 'check-circle';
+            // Failsafe limit to prevent infinite loops (max 100 years = 1200 months)
+            let limit = 0; 
 
-      if (type === 'error') {
-        bgTheme = 'bg-slate-900 border-rose-500/30 text-rose-400';
-        iconName = 'alert-octagon';
-      } else if (type === 'info') {
-        bgTheme = 'bg-slate-900 border-sky-500/30 text-sky-400';
-        iconName = 'info';
-      }
+            while (current <= targetKey && limit < 1200) {
+                const settings = appData.monthlySettings[current] || {};
+                const base = (settings.base !== undefined && settings.base !== null && settings.base !== "") ? parseFloat(settings.base) : appData.globalBase;
+                const extra = settings.extra ? parseFloat(settings.extra) : 0;
+                const spent = appData.transactions.filter(t => t.monthKey === current).reduce((s, t) => s + t.amount, 0);
 
-      toast.className = `flex items-center gap-3 px-4 py-3 bg-slate-900 border rounded-xl shadow-2xl transition-all duration-300 transform translate-y-2 opacity-0 select-none pointer-events-auto ${bgTheme}`;
-      toast.innerHTML = `
-        <i data-lucide="${iconName}" class="w-4.5 h-4.5 shrink-0"></i>
-        <span class="text-xs font-bold text-slate-100">${message}</span>
-      `;
+                const totalBudget = base + extra + rollover;
+                const remaining = totalBudget - spent;
 
-      container.appendChild(toast);
-      safeCreateIcons();
+                if (current === targetKey) {
+                    targetStats = { base, extra, rolloverIn: rollover, totalBudget, spent, remaining };
+                }
+                
+                rollover = remaining; // Pass to next month
+                current = incrementMonthKey(current);
+                limit++;
+            }
 
-      // Trigger animation
-      setTimeout(() => {
-        toast.className = toast.className.replace('translate-y-2 opacity-0', 'translate-y-0 opacity-100');
-      }, 50);
+            // If target is before earliest, return defaults
+            if (!targetStats) {
+                 const settings = appData.monthlySettings[targetKey] || {};
+                 const base = settings.base !== undefined ? parseFloat(settings.base) : appData.globalBase;
+                 const extra = settings.extra || 0;
+                 targetStats = { base, extra, rolloverIn: 0, totalBudget: base+extra, spent: 0, remaining: base+extra };
+            }
+            return targetStats;
+        }
 
-      // Kill Animation and Element
-      setTimeout(() => {
-        toast.className = toast.className.replace('translate-y-0 opacity-100', 'translate-y-2 opacity-0');
-        setTimeout(() => {
-          toast.remove();
-        }, 300);
-      }, 3500);
-    }
+        // --- Render UI ---
+        
+        window.changeMonth = (delta) => {
+            currentMonthDate.setMonth(currentMonthDate.getMonth() + delta);
+            updateDashboard();
+            if (document.getElementById('tab-charts').classList.contains('active')) renderCharts();
+        };
 
-  </script>
+        function updateDashboard() {
+            const viewedKey = getMonthKey(currentMonthDate);
+            const realKey = getMonthKey(new Date());
+            
+            // Header Update
+            document.getElementById('currentMonthDisplay').innerText = getDisplayMonthName(currentMonthDate);
+            document.getElementById('currentStatusBadge').style.display = (viewedKey === realKey) ? 'inline-block' : 'none';
+            document.getElementById('settingsMonthLabel').innerText = getDisplayMonthName(currentMonthDate);
+            
+            // Calculate Stats
+            const stats = calculateMonthStats(viewedKey);
+            
+            document.getElementById('dashRemaining').innerText = fmtCurrency(stats.remaining);
+            document.getElementById('dashSpent').innerText = fmtCurrency(stats.spent);
+            document.getElementById('dashTotalBudget').innerText = fmtCurrency(stats.totalBudget);
+            
+            // Breakdown text
+            let bdown = `<span class="bg-slate-200 px-2 py-0.5 rounded">Base: ${fmtCurrency(stats.base)}</span>`;
+            if (stats.rolloverIn !== 0) bdown += `<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded">Rollover: ${fmtCurrency(stats.rolloverIn)}</span>`;
+            if (stats.extra > 0) bdown += `<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Extra: ${fmtCurrency(stats.extra)}</span>`;
+            document.getElementById('dashBudgetBreakdown').innerHTML = bdown;
+
+            // Progress Bar
+            let percent = stats.totalBudget > 0 ? (stats.spent / stats.totalBudget) * 100 : 0;
+            const bar = document.getElementById('dashProgressBar');
+            bar.style.width = `${Math.min(percent, 100)}%`;
+            if (percent > 90) bar.className = "h-full rounded-full transition-all duration-500 bg-red-500";
+            else if (percent > 75) bar.className = "h-full rounded-full transition-all duration-500 bg-yellow-400";
+            else bar.className = "h-full rounded-full transition-all duration-500 bg-green-500";
+
+            // Safe to spend (Current Month only)
+            const safeCard = document.getElementById('safeToSpendCard');
+            if (viewedKey === realKey) {
+                safeCard.classList.remove('hidden');
+                calculateSafeToSpend(stats.remaining);
+            } else {
+                safeCard.classList.add('hidden');
+            }
+
+            // Month Settings Form
+            const mSet = appData.monthlySettings[viewedKey] || {};
+            document.getElementById('monthBaseOverride').value = mSet.base !== undefined ? mSet.base : "";
+            document.getElementById('monthExtraFunds').value = mSet.extra || 0;
+
+            // Transactions List
+            const txs = appData.transactions.filter(t => t.monthKey === viewedKey).sort((a,b) => new Date(b.date) - new Date(a.date));
+            const listEl = document.getElementById('transactionList');
+            if (txs.length === 0) {
+                listEl.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>No transactions for this month.</div>`;
+            } else {
+                listEl.innerHTML = txs.map(t => {
+                    const d = new Date(t.date);
+                    return `
+                    <div class="p-4 hover:bg-slate-50 flex justify-between items-center transition-colors">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 shrink-0">
+                                <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-slate-800">${t.desc}</h4>
+                                <p class="text-xs text-slate-500">${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="font-bold text-slate-800 text-right">${fmtCurrency(t.amount)}</span>
+                            <button onclick="promptDeleteTx('${t.id}')" class="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+            lucide.createIcons();
+        }
+
+        window.calculateSafeToSpend = (forceRemaining = null) => {
+            const remaining = forceRemaining !== null ? forceRemaining : calculateMonthStats(getMonthKey(new Date())).remaining;
+            
+            const now = new Date();
+            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            const daysLeft = daysInMonth - now.getDate() + 1; // inclusive of today
+
+            const daily = remaining / daysLeft;
+            document.getElementById('safeDailyLimit').innerText = fmtCurrency(Math.max(0, daily));
+
+            const customDays = parseInt(document.getElementById('safeDaysInput').value) || 1;
+            document.getElementById('safeCustomLimit').innerText = fmtCurrency(Math.max(0, remaining / customDays));
+        };
+
+        // --- Interaction Logic ---
+
+        window.handleAddTx = (e) => {
+            e.preventDefault();
+            const amt = parseFloat(document.getElementById('txAmount').value);
+            const desc = document.getElementById('txDesc').value;
+            const dateStr = document.getElementById('txDate').value;
+            
+            if (!amt || !dateStr) return;
+
+            const dateObj = new Date(dateStr);
+            const tx = {
+                id: crypto.randomUUID(),
+                amount: amt,
+                desc: desc,
+                date: dateObj.toISOString(),
+                monthKey: getMonthKey(dateObj)
+            };
+
+            appData.transactions.push(tx);
+            saveData();
+            closeModal('addTxModal');
+            document.getElementById('addTxForm').reset();
+            
+            // Set date to now for next open
+            document.getElementById('txDate').value = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16);
+            
+            // Optional: Auto switch to the month we just added a transaction for
+            const parts = tx.monthKey.split('-');
+            currentMonthDate = new Date(parts[0], parts[1]-1, 1);
+            
+            updateDashboard();
+            if (document.getElementById('tab-charts').classList.contains('active')) renderCharts();
+        };
+
+        window.promptDeleteTx = (id) => {
+            deleteTargetId = id;
+            openModal('deleteModal');
+        };
+
+        document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
+            if (deleteTargetId) {
+                appData.transactions = appData.transactions.filter(t => t.id !== deleteTargetId);
+                saveData();
+                updateDashboard();
+                if (document.getElementById('tab-charts').classList.contains('active')) renderCharts();
+                closeModal('deleteModal');
+                deleteTargetId = null;
+            }
+        });
+
+        window.saveMonthSettings = () => {
+            const baseVal = document.getElementById('monthBaseOverride').value;
+            const extraVal = document.getElementById('monthExtraFunds').value;
+            const viewedKey = getMonthKey(currentMonthDate);
+
+            if (!appData.monthlySettings[viewedKey]) appData.monthlySettings[viewedKey] = {};
+            
+            appData.monthlySettings[viewedKey].base = baseVal !== "" ? parseFloat(baseVal) : null;
+            appData.monthlySettings[viewedKey].extra = extraVal !== "" ? parseFloat(extraVal) : 0;
+
+            saveData();
+            updateDashboard();
+            if (document.getElementById('tab-charts').classList.contains('active')) renderCharts();
+        };
+
+        window.saveGlobalBase = () => {
+            const v = parseFloat(document.getElementById('globalBaseInput').value);
+            if (v && v >= 0) {
+                appData.globalBase = v;
+                saveData();
+                updateDashboard();
+                showMsg("Success", "Global base budget updated.");
+            }
+        };
+
+        window.executeWipe = () => {
+            appData = { globalBase: 160000, monthlySettings: {}, transactions: [] };
+            saveData();
+            updateDashboard();
+            closeModal('wipeModal');
+            showMsg("Wiped", "All data has been cleared.");
+        };
+
+        // --- Data Persistence & Firebase ---
+
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyD0L-3ixiamzMZdWr2E-3eIEpkhatNBp2c",
+            authDomain: "drugs-91763.firebaseapp.com",
+            projectId: "drugs-91763",
+            storageBucket: "drugs-91763.firebasestorage.app",
+            messagingSenderId: "405463489645",
+            appId: "1:405463489645:web:8b09e23c3c3a00a7ccb364"
+        };
+
+        const app = initializeApp(FIREBASE_CONFIG);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        let deviceId = localStorage.getItem('budgetTrackerDeviceId');
+        if (!deviceId) {
+            deviceId = crypto.randomUUID();
+            localStorage.setItem('budgetTrackerDeviceId', deviceId);
+        }
+
+        let unsubscribeSnapshot = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'budget-tracker';
+
+        async function initFirebase() {
+            try {
+                // Rule 3: Auth Before Queries
+                await signInAnonymously(auth);
+                document.getElementById('displaySyncId').innerText = deviceId;
+                setupFirebaseListener();
+            } catch (error) {
+                console.error("Firebase init failed:", error);
+                loadLocalData(); // Fallback
+            }
+        }
+
+        function setupFirebaseListener() {
+            if (unsubscribeSnapshot) unsubscribeSnapshot();
+            
+            // Rule 1 strictly followed using public path with deviceId as document id so sync works globally
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'budgets', deviceId);
+            
+            unsubscribeSnapshot = onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const fbData = docSnap.data();
+                    // Merge / Overwrite
+                    appData = fbData.payload ? JSON.parse(fbData.payload) : fbData;
+                    
+                    // Backup locally
+                    localStorage.setItem('budgetTrackerData', JSON.stringify(appData));
+                    
+                    // Refresh UI safely
+                    document.getElementById('globalBaseInput').value = appData.globalBase || 160000;
+                    updateDashboard();
+                    if (document.getElementById('tab-charts').classList.contains('active')) renderCharts();
+                } else {
+                    // First time, push local data up
+                    syncToFirebase(); 
+                }
+            }, (error) => {
+                console.error("Firebase Snapshot Error:", error);
+                loadLocalData();
+            });
+        }
+
+        async function syncToFirebase() {
+            if (!auth.currentUser) return;
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'budgets', deviceId);
+            try {
+                await setDoc(docRef, {
+                    payload: JSON.stringify(appData),
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+            } catch (e) {
+                console.error("Sync Error:", e);
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('budgetTrackerData', JSON.stringify(appData));
+            syncToFirebase(); // Fire and forget
+        }
+
+        function loadLocalData() {
+            const local = localStorage.getItem('budgetTrackerData');
+            if (local) {
+                appData = JSON.parse(local);
+                document.getElementById('globalBaseInput').value = appData.globalBase || 160000;
+            }
+            updateDashboard();
+        }
+
+        window.copySyncId = () => {
+            navigator.clipboard.writeText(deviceId).then(() => {
+                showMsg("Copied", "Sync ID copied to clipboard.");
+            }).catch(err => {
+                // Fallback for iFrames
+                const textArea = document.createElement("textarea");
+                textArea.value = deviceId;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showMsg("Copied", "Sync ID copied to clipboard.");
+                } catch (e) {
+                    showMsg("Error", "Could not copy ID automatically.", true);
+                }
+                document.body.removeChild(textArea);
+            });
+        };
+
+        window.importSyncId = () => {
+            const input = document.getElementById('pasteSyncId').value.trim();
+            if (input && input.length > 10) {
+                deviceId = input;
+                localStorage.setItem('budgetTrackerDeviceId', deviceId);
+                document.getElementById('displaySyncId').innerText = deviceId;
+                document.getElementById('pasteSyncId').value = '';
+                setupFirebaseListener();
+                showMsg("Connected", "Now syncing with account: " + deviceId);
+            } else {
+                showMsg("Invalid ID", "Please enter a valid Sync ID.", true);
+            }
+        };
+
+        // --- Import / Export ---
+        window.exportData = () => {
+            const blob = new Blob([JSON.stringify(appData, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `budget-data-${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        window.importData = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.transactions && typeof imported.globalBase !== 'undefined') {
+                        appData = imported;
+                        saveData();
+                        updateDashboard();
+                        showMsg("Success", "Data imported successfully.");
+                    } else { throw new Error("Invalid structure"); }
+                } catch (err) {
+                    showMsg("Import Error", "Invalid JSON file structure.", true);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset input
+        };
+
+        // --- Charts logic ---
+        function renderCharts() {
+            renderBurnRateChart();
+            renderLedgerChart();
+        }
+
+        function renderBurnRateChart() {
+            const ctx = document.getElementById('burnRateChart').getContext('2d');
+            if (burnRateChartInstance) burnRateChartInstance.destroy();
+
+            const viewedKey = getMonthKey(currentMonthDate);
+            const realKey = getMonthKey(new Date());
+            const daysInMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 0).getDate();
+            
+            const labels = Array.from({length: daysInMonth}, (_, i) => i + 1);
+            let cumulativeSpent = Array(daysInMonth).fill(null);
+            
+            // Filter txs
+            const txs = appData.transactions.filter(t => t.monthKey === viewedKey);
+            
+            let currentTotal = 0;
+            let lastDayHasData = 0;
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                // To avoid drawing future days in current month, break if past today
+                if (viewedKey === realKey && day > new Date().getDate()) break;
+
+                const dayTxs = txs.filter(t => new Date(t.date).getDate() === day);
+                const daySum = dayTxs.reduce((sum, t) => sum + t.amount, 0);
+                currentTotal += daySum;
+                cumulativeSpent[day - 1] = currentTotal;
+                lastDayHasData = day;
+            }
+
+            const datasets = [{
+                label: 'Cumulative Spent',
+                data: cumulativeSpent,
+                borderColor: '#4f46e5',
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                fill: true,
+                tension: 0.2,
+                pointRadius: 2
+            }];
+
+            // Prediction Line
+            if (viewedKey === realKey && lastDayHasData > 0) {
+                const avgDaily = currentTotal / lastDayHasData;
+                const predictionData = Array(daysInMonth).fill(null);
+                
+                // Draw line from last actual data point to end of month
+                for (let day = lastDayHasData; day <= daysInMonth; day++) {
+                    predictionData[day - 1] = currentTotal + (avgDaily * (day - lastDayHasData));
+                }
+                
+                datasets.push({
+                    label: 'Prediction',
+                    data: predictionData,
+                    borderColor: '#94a3b8',
+                    borderDash: [5, 5],
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0
+                });
+            }
+
+            burnRateChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { tooltip: { mode: 'index', intersect: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function renderLedgerChart() {
+            const ctx = document.getElementById('ledgerChart').getContext('2d');
+            if (ledgerChartInstance) ledgerChartInstance.destroy();
+
+            const labels = [];
+            const dataSpent = [];
+            const dataSaved = [];
+            const dataOver = [];
+
+            // Calculate past 6 months ending in currently viewed month
+            let target = new Date(currentMonthDate);
+            target.setMonth(target.getMonth() - 5);
+
+            for (let i = 0; i < 6; i++) {
+                const key = getMonthKey(target);
+                labels.push(target.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }));
+                
+                const stats = calculateMonthStats(key);
+                
+                if (stats.spent <= stats.totalBudget) {
+                    dataSpent.push(stats.spent);
+                    dataSaved.push(stats.totalBudget - stats.spent);
+                    dataOver.push(0);
+                } else {
+                    dataSpent.push(stats.totalBudget); // Capped at budget limit
+                    dataSaved.push(0);
+                    dataOver.push(stats.spent - stats.totalBudget);
+                }
+                
+                target.setMonth(target.getMonth() + 1);
+            }
+
+            ledgerChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Spent (in limit)', data: dataSpent, backgroundColor: '#3b82f6', stack: 'Stack 0' },
+                        { label: 'Saved / Rollover', data: dataSaved, backgroundColor: '#10b981', stack: 'Stack 0' },
+                        { label: 'Overspent', data: dataOver, backgroundColor: '#ef4444', stack: 'Stack 0' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { tooltip: { mode: 'index', intersect: false } },
+                    scales: {
+                        x: { stacked: true, grid: { display: false } },
+                        y: { stacked: true, grid: { color: '#f1f5f9' } }
+                    }
+                }
+            });
+        }
+
+        // --- Bootup ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set default date input in Add Modal to local time
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('txDate').value = now.toISOString().slice(0, 16);
+
+            // Load local first for fast render
+            loadLocalData();
+            
+            // Then init firebase (which overwrites local if exists on cloud)
+            initFirebase();
+        });
+
+    </script>
 </body>
 </html>
 
