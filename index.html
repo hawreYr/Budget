@@ -4,12 +4,13 @@
 <head>
     
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">.  
 
     <title>Budget Tracker Pro</title>
      <style>
+        /* Lock Viewport Dimensions */
         html, body {
             width: 100vw !important;
             height: 100dvh !important;
@@ -19,6 +20,21 @@
             margin: 0 !important;
             padding: 0 !important;
         }
+
+        /* Hide unstyled HTML to prevent the iOS layout snap */
+        body {
+            opacity: 0;
+        }
+
+        /* Fade-in class applied via JS */
+        body.tailwind-ready {
+            opacity: 1;
+            transition: opacity 0.2s ease-out;
+        }
+
+        /* Custom Scrollbar (Keep your existing scrollbar CSS here) */
+        ::-webkit-scrollbar { width: 6px; }
+        /* ... rest of your existing scrollbar CSS ... */
     </style>
     <!-- Tailwind CSS with Dark Mode Class Strategy -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1229,6 +1245,16 @@
         });
 
     </script>
+    <script>
+        // Wait for Tailwind CDN and resources to finish loading
+        window.addEventListener('load', () => {
+            // A tiny 100ms buffer ensures Tailwind has fully applied its layout classes
+            setTimeout(() => {
+                document.body.classList.add('tailwind-ready');
+            }, 100);
+        });
+    </script>
+    
 </body>
 </html>
 
